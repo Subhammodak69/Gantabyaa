@@ -450,7 +450,6 @@ export interface PointsPagination {
 export interface AccountPoints {
   points_balance: string | number;
   rank: number;
-  around: PointsCustomer[];
   transactions: PointsTransaction[];
   transaction_pagination: PointsPagination;
 }

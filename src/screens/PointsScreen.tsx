@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  Image,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -10,7 +9,7 @@ import {
 } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { fetchAccountPoints } from '../api/tourApi';
-import { AccountPoints, PointsCustomer, PointsTransaction } from '../api/types';
+import { AccountPoints, PointsTransaction } from '../api/types';
 import { AppColors, useTheme } from '../theme/theme';
 
 const PAGE_SIZE = 20;
@@ -48,11 +47,18 @@ export const PointsScreen: React.FC<{
     try {
       const response = await fetchAccountPoints(page, PAGE_SIZE);
       if (!response.data) throw new Error(response.message || 'Points could not be loaded.');
+      const pageData: AccountPoints = {
+        ...response.data,
+        transactions: Array.isArray(response.data.transactions) ? response.data.transactions : [],
+      };
       setAccount(current => {
-        if (page === 1 || !current) return response.data!;
+        if (page === 1 || !current) return pageData;
         return {
-          ...response.data!,
-          transactions: [...current.transactions, ...response.data!.transactions],
+          ...pageData,
+          transactions: [
+            ...(Array.isArray(current.transactions) ? current.transactions : []),
+            ...pageData.transactions,
+          ],
         };
       });
     } catch (loadError) {
@@ -66,7 +72,7 @@ export const PointsScreen: React.FC<{
 
   useEffect(() => { loadPoints(); }, [loadPoints]);
 
-  const transactions = account?.transactions || [];
+  const transactions = Array.isArray(account?.transactions) ? account.transactions : [];
   const pagination = account?.transaction_pagination;
 
   return (
@@ -100,13 +106,6 @@ export const PointsScreen: React.FC<{
 
         {!!error && <View style={styles.errorBox}><Text style={styles.errorText}>{error}</Text><Pressable onPress={() => loadPoints()}><Text style={styles.retry}>Retry</Text></Pressable></View>}
 
-        <View style={styles.sectionHeading}>
-          <View><Text style={styles.eyebrow}>YOUR COMMUNITY</Text><Text style={styles.sectionTitle}>Travelers around you</Text></View>
-        </View>
-        {account?.around.length ? account.around.map((customer, index) => (
-          <CustomerRow key={`${customer.rank}-${customer.customer_name}-${index}`} customer={customer} styles={styles} />
-        )) : loading ? <Text style={styles.empty}>Loading ranking…</Text> : <Text style={styles.empty}>No nearby ranking available yet.</Text>}
-
         <View style={[styles.sectionHeading, styles.activityHeading]}>
           <View><Text style={styles.eyebrow}>POINTS ACTIVITY</Text><Text style={styles.sectionTitle}>Transactions</Text></View>
           <Text style={styles.count}>{pagination?.total_items ?? transactions.length} total</Text>
@@ -123,19 +122,6 @@ export const PointsScreen: React.FC<{
     </View>
   );
 };
-
-const CustomerRow = ({ customer, styles }: { customer: PointsCustomer; styles: ReturnType<typeof makeStyles> }) => (
-  <View style={styles.customerRow}>
-    {customer.customer_profile_picture
-      ? <Image source={{ uri: customer.customer_profile_picture }} style={styles.avatar} />
-      : <View style={[styles.avatar, styles.avatarFallback]}><Text style={styles.initial}>{customer.customer_name?.charAt(0)?.toUpperCase() || '?'}</Text></View>}
-    <View style={styles.customerCopy}>
-      <Text style={styles.customerName} numberOfLines={1}>{customer.customer_name || 'Traveler'}</Text>
-      <Text style={styles.customerMeta}>Joined {formatDate(customer.customer_joined_at)}</Text>
-    </View>
-    <View style={styles.customerScore}><Text style={styles.customerRank}>#{customer.rank}</Text><Text style={styles.customerPoints}>{formatPoints(customer.point_balance)} pts</Text></View>
-  </View>
-);
 
 const TransactionRow = ({
   transaction, styles, colors,
@@ -180,16 +166,6 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   eyebrow: { color: colors.textMuted, fontSize: 9, fontWeight: '900', letterSpacing: 1.2 },
   sectionTitle: { color: colors.text, fontSize: 16, fontWeight: '900', marginTop: 3 },
   count: { color: colors.textMuted, fontSize: 10, fontWeight: '700' },
-  customerRow: { flexDirection: 'row', alignItems: 'center', padding: 11, backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1, borderRadius: 12, marginBottom: 7 },
-  avatar: { width: 38, height: 38, borderRadius: 19, marginRight: 10 },
-  avatarFallback: { backgroundColor: colors.primarySubtle, justifyContent: 'center', alignItems: 'center' },
-  initial: { color: colors.primary, fontSize: 14, fontWeight: '900' },
-  customerCopy: { flex: 1, minWidth: 0 },
-  customerName: { color: colors.text, fontSize: 12, fontWeight: '800' },
-  customerMeta: { color: colors.textMuted, fontSize: 9, marginTop: 4 },
-  customerScore: { alignItems: 'flex-end', marginLeft: 8 },
-  customerRank: { color: colors.primary, fontSize: 11, fontWeight: '900' },
-  customerPoints: { color: colors.textSecondary, fontSize: 9, marginTop: 3 },
   transactionRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
   transactionIcon: { width: 34, height: 34, borderRadius: 11, justifyContent: 'center', alignItems: 'center', marginRight: 10 },
   earnedIcon: { backgroundColor: colors.successLight },
