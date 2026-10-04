@@ -100,7 +100,7 @@ const makeStyles = (COLORS: ReturnType<typeof useColors>) => StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 14,
-    backgroundColor: COLORS.card,
+    backgroundColor: COLORS.bg,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
