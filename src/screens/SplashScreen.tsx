@@ -13,10 +13,18 @@ import { COLORS } from '../theme/theme';
 
 interface SplashScreenProps {
   onFinished: () => void;
+  autoAdvance?: boolean;
+  showActions?: boolean;
+  onExplorePress?: () => void;
+  onLoginPress?: () => void;
 }
 
 export const SplashScreen: React.FC<SplashScreenProps> = ({
   onFinished,
+  autoAdvance = true,
+  showActions = false,
+  onExplorePress,
+  onLoginPress,
 }) => {
   const entrance = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -25,9 +33,14 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
       duration: 900,
       useNativeDriver: true,
     }).start();
+
+    if (!autoAdvance) {
+      return undefined;
+    }
+
     const timer = setTimeout(onFinished, 3500);
     return () => clearTimeout(timer);
-  }, [entrance, onFinished]);
+  }, [autoAdvance, entrance, onFinished]);
 
   return (
     <View style={styles.background}>
@@ -85,32 +98,33 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
           <ActivityIndicator size="small" color={COLORS.gold} />
           <Text style={styles.loadingText}>Loading your journey…</Text>
         </View>
-        {/* Action Buttons remain intentionally hidden on the automatic splash screen. */}
-        <View style={styles.actions}>
-          <Pressable
-            onPress={() => {}}
-            style={({ pressed }) => [
-              styles.primaryBtn,
-              pressed && styles.btnPressed,
-            ]}
-          >
-            <Text style={styles.primaryBtnText}>Explore Tours (Guest Access)  →</Text>
-          </Pressable>
+        {showActions ? (
+          <View style={styles.actions}>
+            <Pressable
+              onPress={onExplorePress ?? onFinished}
+              style={({ pressed }) => [
+                styles.primaryBtn,
+                pressed && styles.btnPressed,
+              ]}
+            >
+              <Text style={styles.primaryBtnText}>Explore Tours (Guest Access)  →</Text>
+            </Pressable>
 
-          <Pressable
-            onPress={() => {}}
-            style={({ pressed }) => [
-              styles.secondaryBtn,
-              pressed && styles.btnPressed,
-            ]}
-          >
-            <Text style={styles.secondaryBtnText}>Sign In / Member Login</Text>
-          </Pressable>
+            <Pressable
+              onPress={onLoginPress ?? onFinished}
+              style={({ pressed }) => [
+                styles.secondaryBtn,
+                pressed && styles.btnPressed,
+              ]}
+            >
+              <Text style={styles.secondaryBtnText}>Sign In / Member Login</Text>
+            </Pressable>
 
-          <Text style={styles.noLoginNote}>
-            ✓ No login required to browse & view complete itineraries
-          </Text>
-        </View>
+            <Text style={styles.noLoginNote}>
+              ✓ No login required to browse & view complete itineraries
+            </Text>
+          </View>
+        ) : null}
       </Animated.View>
     </View>
   );
@@ -206,7 +220,6 @@ const styles = StyleSheet.create({
   },
   actions: {
     width: '100%',
-    display: 'none',
   },
   loadingArea: {
     alignItems: 'center',
