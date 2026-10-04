@@ -1,12 +1,13 @@
 import { io } from 'socket.io-client';
 import type { Socket } from 'socket.io-client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 import { BASE_API, getAccessToken } from '../api/client';
 import { getTrackedVisitorId } from '../api/visitors';
 
 const VISITOR_SESSION_ID_KEY = '@gantabyaa/visitor_session_id';
 
-export async function createVisitorSocket(customerId = ''): Promise<Socket> {
+export async function createVisitorSocket(customerId = '', page = 'home'): Promise<Socket> {
   const [token, visitorId, sessionId] = await Promise.all([
     getAccessToken(),
     getTrackedVisitorId(),
@@ -26,10 +27,12 @@ export async function createVisitorSocket(customerId = ''): Promise<Socket> {
       customer_id: customerId || undefined,
       source: 'mobile',
       device: 'mobile',
+      os: Platform.OS,
+      page,
+      current_url: page,
     },
   });
 
-  socket.connect();
   return socket;
 }
 

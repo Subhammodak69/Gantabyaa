@@ -327,7 +327,7 @@ function AppInner() {
     let notificationSocket: WebSocket | null = null;
 
     const connect = async () => {
-      const visitorSocket = await createVisitorSocket(user?.id || '');
+      const visitorSocket = await createVisitorSocket(user?.id || '', currentScreenRef.current);
       if (!mounted) {
         visitorSocket.disconnect();
         return;
@@ -340,6 +340,11 @@ function AppInner() {
           customer_id: user?.id || undefined,
           page: currentScreenRef.current,
           current_url: currentScreenRef.current,
+          source: 'mobile',
+        });
+        visitorSocket.emit('page_view', {
+          path: currentScreenRef.current,
+          page: currentScreenRef.current,
         });
       });
       visitorSocket.on('notification.created', (item: any) => {
@@ -359,6 +364,7 @@ function AppInner() {
       visitorSocket.on('connect_error', error => {
         console.warn('Realtime connection failed:', error?.message || error);
       });
+      visitorSocket.connect();
 
       const token = await getAccessToken();
       if (token && mounted) {
