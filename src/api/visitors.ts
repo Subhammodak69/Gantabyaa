@@ -31,6 +31,11 @@ export async function getTrackedVisitorId(): Promise<string | null> {
 }
 
 export async function identifyVisitor(customerId = ''): Promise<string | null> {
+  const existingId = await getTrackedVisitorId();
+  if (existingId && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(existingId)) {
+    return existingId;
+  }
+
   try {
     const payload: any = {
       fingerprint: await getFingerprint(),

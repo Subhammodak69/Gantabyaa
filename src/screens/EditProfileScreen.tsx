@@ -127,7 +127,7 @@ export const EditProfileScreen: React.FC<{
         is_active: user?.is_active ?? true,
       });
       if (response.data) {
-        onSaved(response.data);
+        onSaved({ ...(user || {}), ...response.data, profile_pic: profilePic });
         await showDialog({
           title: 'Profile updated ✨',
           message: 'Your profile details and picture have been saved.',
@@ -199,6 +199,15 @@ export const EditProfileScreen: React.FC<{
           </View>
 
           <Text style={styles.avatarHint}>Tap ＋ to crop & upload profile picture</Text>
+          {profilePic ? (
+            <Pressable
+              onPress={() => setProfilePic('')}
+              disabled={loading || uploadingImage}
+              style={styles.removePhotoButton}
+            >
+              <Text style={styles.removePhotoText}>Remove profile picture</Text>
+            </Pressable>
+          ) : null}
 
           {/* Quick preset selector */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.presetsRow}>
@@ -355,6 +364,19 @@ const makeStyles = (COLORS: ReturnType<typeof useColors>) => StyleSheet.create({
     color: COLORS.textSecondary,
     marginTop: 8,
     fontWeight: '600',
+  },
+  removePhotoButton: {
+    marginTop: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.danger,
+  },
+  removePhotoText: {
+    color: COLORS.danger,
+    fontSize: 11,
+    fontWeight: '800',
   },
   presetsRow: {
     flexDirection: 'row',

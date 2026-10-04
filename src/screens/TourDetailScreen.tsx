@@ -16,7 +16,7 @@ import { useColors } from '../theme/theme';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import Video from 'react-native-video';
 import { TourPackageDetail, TourPackageSummary, SeasonVariant, NavScreen } from '../types';
-import { fetchTourDetail, fetchTourVariant, getTourWebUrl, openWhatsAppChat, submitReviewApi, fetchPackageReviews, fetchReviewEligibility } from '../api/tourApi';
+import { fetchTourDetail, fetchTourVariant, getTourWebUrl, openWhatsAppChat, submitReviewApi, updateReviewApi, fetchPackageReviews, fetchReviewEligibility } from '../api/tourApi';
 import { TourDetailSkeleton } from '../components/Skeleton';
 import { MediaViewer, MediaSelection } from '../components/MediaViewer';
 import { showApiError } from '../utils/toast';
@@ -77,6 +77,7 @@ export const TourDetailScreen: React.FC<TourDetailScreenProps> = ({
     '1': true,
   });
   const [selectedMedia, setSelectedMedia] = useState<MediaSelection | null>(null);
+  const [selectedMediaList, setSelectedMediaList] = useState<MediaSelection[] | null>(null);
   const [selectedDateDetail, setSelectedDateDetail] = useState<any | null>(null);
   const [dateModalVisible, setDateModalVisible] = useState(false);
   const [selectedMediaIndex, setSelectedMediaIndex] = useState<number>(0);
@@ -90,6 +91,7 @@ export const TourDetailScreen: React.FC<TourDetailScreenProps> = ({
     review?: any;
   } | null>(null);
   const [reviewEligibilityLoading, setReviewEligibilityLoading] = useState(false);
+  const [editingReview, setEditingReview] = useState(false);
 
   const loadDetail = useCallback(async () => {
     setLoading(true);
@@ -102,7 +104,7 @@ export const TourDetailScreen: React.FC<TourDetailScreenProps> = ({
           reviews = revRes.reviews;
         }
       } catch {
-        // fallback to embedded reviews if any
+        // Keep the embedded reviews if the separate reviews request fails.
       }
       setTour({ ...data, reviews });
       if (data.seasons && data.seasons.length > 0) {
@@ -217,17 +219,28 @@ export const TourDetailScreen: React.FC<TourDetailScreenProps> = ({
   };
 
   const handleReviewSubmit = async () => {
-    if (!reviewEligibility?.can_review) {
-      setReviewMessage(reviewEligibility?.has_reviewed ? 'You have already submitted a review for this journey.' : 'You need to complete this journey to write a verified review.');
+    if (!reviewEligibility?.can_review && !(reviewEligibility?.has_reviewed && editingReview)) {
+      setReviewMessage('You need to complete this journey to write a verified review.');
       return;
     }
     if (!reviewText.trim()) { setReviewMessage('Please write a short review first.'); return; }
     setReviewSubmitting(true);
     setReviewMessage('');
     try {
-      await submitReviewApi({package_id: tour?.id || '', rating: reviewRating, review: reviewText.trim(), review_gallery: []});
-      setReviewText('');
-      setReviewMessage('Thank you! Your review was submitted for approval.');
+      if (editingReview) {
+        const reviewId = reviewEligibility?.review?.id;
+        if (!reviewId) throw new Error('Could not find your review to update. Please refresh and try again.');
+        await updateReviewApi(reviewId, {
+          rating: reviewRating,
+          review: reviewText.trim(),
+          review_gallery: reviewEligibility.review.review_gallery || [],
+        });
+      } else {
+        await submitReviewApi({package_id: tour?.id || '', rating: reviewRating, review: reviewText.trim(), review_gallery: []});
+      }
+      if (!editingReview) setReviewText('');
+      setEditingReview(false);
+      setReviewMessage(editingReview ? 'Your review has been updated.' : 'Thank you! Your review was submitted for approval.');
       const reviewSlug = tour?.slug || slug;
       if (reviewSlug) {
         const [eligibilityResult, reviewsResult] = await Promise.all([
@@ -267,7 +280,6 @@ export const TourDetailScreen: React.FC<TourDetailScreenProps> = ({
 
   return (
     <View style={styles.container}>
-      <MediaViewer media={selectedMedia} onClose={() => setSelectedMedia(null)} />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent} refreshControl={<RefreshControl refreshing={loading} onRefresh={loadDetail} colors={[COLORS.primary]} />}>
         {/* Top Hero Image & Actions */}
         <View style={styles.heroWrapper}>
@@ -464,7 +476,13 @@ export const TourDetailScreen: React.FC<TourDetailScreenProps> = ({
                     key={media.id || index}
                     style={styles.galleryVideo}
                     onPress={() => {
-                      setSelectedMediaIndex(index);
+                      const mediaList = (activeSeason?.gallery || []).filter(item => Boolean(item.url)).map(item => ({
+                        uri: item.url as string,
+                        type: (item.type === 'video' || /\.(mp4|webm|mov)(?:$|[?#])/i.test(item.url || '') ? 'video' : 'image') as 'image' | 'video',
+                        title: item.alt || tour?.title || 'Tour Gallery',
+                      }));
+                      setSelectedMediaList(mediaList);
+                      setSelectedMediaIndex(mediaList.findIndex(item => item.uri === media.url));
                       setSelectedMedia({
                         uri: media.url as string,
                         type: 'video',
@@ -479,7 +497,13 @@ export const TourDetailScreen: React.FC<TourDetailScreenProps> = ({
                   <Pressable
                     key={media.id || index}
                     onPress={() => {
-                      setSelectedMediaIndex(index);
+                      const mediaList = (activeSeason?.gallery || []).filter(item => Boolean(item.url)).map(item => ({
+                        uri: item.url as string,
+                        type: (item.type === 'video' || /\.(mp4|webm|mov)(?:$|[?#])/i.test(item.url || '') ? 'video' : 'image') as 'image' | 'video',
+                        title: item.alt || tour?.title || 'Tour Gallery',
+                      }));
+                      setSelectedMediaList(mediaList);
+                      setSelectedMediaIndex(mediaList.findIndex(item => item.uri === media.url));
                       setSelectedMedia({
                         uri: media.url as string,
                         type: 'image',
@@ -628,7 +652,7 @@ export const TourDetailScreen: React.FC<TourDetailScreenProps> = ({
           <View style={styles.reviewSummaryHeader}>
             <View>
               <Text style={styles.sectionTitle}>Traveller Reviews</Text>
-              <Text style={styles.reviewScore}>⭐ 4.9 <Text style={styles.reviewCount}>({tour.reviews?.length || 3} verified ratings)</Text></Text>
+              <Text style={styles.reviewScore}>⭐ {tour.reviews?.length ? (tour.reviews.reduce((sum, review) => sum + review.rating, 0) / tour.reviews.length).toFixed(1) : '0.0'} <Text style={styles.reviewCount}>({tour.reviews?.length || 0} review{tour.reviews?.length === 1 ? '' : 's'})</Text></Text>
             </View>
           </View>
 
@@ -644,7 +668,7 @@ export const TourDetailScreen: React.FC<TourDetailScreenProps> = ({
                 <Text style={styles.reviewSecondaryText}>Sign in</Text>
               </Pressable>
             </View>
-          ) : reviewEligibility?.has_reviewed ? (
+          ) : reviewEligibility?.has_reviewed && !editingReview ? (
             <View style={styles.reviewState}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                 <Text style={{ fontSize: 16 }}>✅</Text>
@@ -660,8 +684,16 @@ export const TourDetailScreen: React.FC<TourDetailScreenProps> = ({
               <Text style={[styles.reviewStateText, { marginTop: 4, fontSize: 12 }]}>
                 Thank you for sharing your verified experience!
               </Text>
+              {reviewEligibility.review?.id ? (
+                <Pressable
+                  style={styles.reviewSecondaryButton}
+                  onPress={() => setEditingReview(true)}
+                >
+                  <Text style={styles.reviewSecondaryText}>Edit review</Text>
+                </Pressable>
+              ) : null}
             </View>
-          ) : !reviewEligibility?.can_review ? (
+          ) : !reviewEligibility?.can_review && !editingReview ? (
             <View style={styles.reviewState}>
               <Text style={styles.reviewStateText}>You need to complete this journey to write a verified review.</Text>
               <Text style={[styles.reviewStateText, { fontSize: 11, color: COLORS.textMuted, marginTop: 4 }]}>
@@ -670,7 +702,7 @@ export const TourDetailScreen: React.FC<TourDetailScreenProps> = ({
             </View>
           ) : (
           <View style={styles.reviewForm}>
-            <Text style={styles.reviewFormTitle}>Share your experience</Text>
+            <Text style={styles.reviewFormTitle}>{editingReview ? 'Edit your review' : 'Share your experience'}</Text>
             <View style={styles.ratingPicker}>
               {[1, 2, 3, 4, 5].map(value => <Pressable key={value} onPress={() => setReviewRating(value)} hitSlop={4}><Text style={[styles.ratingStar, value <= reviewRating && styles.ratingStarActive]}>★</Text></Pressable>)}
             </View>
@@ -685,7 +717,7 @@ export const TourDetailScreen: React.FC<TourDetailScreenProps> = ({
             />
             {reviewMessage ? <Text style={styles.reviewFormMessage}>{reviewMessage}</Text> : null}
             <Pressable style={[styles.reviewSubmit, reviewSubmitting && styles.reviewSubmitDisabled]} onPress={handleReviewSubmit} disabled={reviewSubmitting}>
-              {reviewSubmitting ? <ActivityIndicator color="#FFFFFF" size="small" /> : <Text style={styles.reviewSubmitText}>Submit review</Text>}
+              {reviewSubmitting ? <ActivityIndicator color="#FFFFFF" size="small" /> : <Text style={styles.reviewSubmitText}>{editingReview ? 'Update review' : 'Submit review'}</Text>}
             </Pressable>
           </View>
           )}
@@ -702,12 +734,30 @@ export const TourDetailScreen: React.FC<TourDetailScreenProps> = ({
               <Text style={styles.reviewBody}>“{rev.review}”</Text>
               {rev.review_gallery && rev.review_gallery.length > 0 && (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.reviewGalleryRow}>
-                  {rev.review_gallery.map((media, index) => media.url && media.type !== 'video' ? (
-                    <Pressable key={media.id || index} onPress={() => setSelectedMedia({uri: media.url as string, type: 'image', title: media.alt || 'Review photo'})}>
+                  {rev.review_gallery.map((media, index) => media.url && media.type !== 'video' && !/\.(mp4|webm|mov)(?:$|[?#])/i.test(media.url) ? (
+                    <Pressable key={media.id || index} onPress={() => {
+                      const mediaList = rev.review_gallery?.filter(item => Boolean(item.url)).map(item => ({
+                        uri: item.url as string,
+                        type: (item.type === 'video' || /\.(mp4|webm|mov)(?:$|[?#])/i.test(item.url || '') ? 'video' : 'image') as 'image' | 'video',
+                        title: item.alt || 'Review media',
+                      })) || [];
+                      setSelectedMediaList(mediaList);
+                      setSelectedMediaIndex(mediaList.findIndex(item => item.uri === media.url));
+                      setSelectedMedia({uri: media.url as string, type: 'image', title: media.alt || 'Review photo'});
+                    }}>
                       <Image source={{uri: media.url}} style={styles.reviewGalleryImage} />
                     </Pressable>
                   ) : media.url ? (
-                    <Pressable key={media.id || index} onPress={() => setSelectedMedia({uri: media.url as string, type: 'video', title: media.alt || 'Review video'})} style={styles.reviewVideoLink}>
+                    <Pressable key={media.id || index} onPress={() => {
+                      const mediaList = rev.review_gallery?.filter(item => Boolean(item.url)).map(item => ({
+                        uri: item.url as string,
+                        type: (item.type === 'video' || /\.(mp4|webm|mov)(?:$|[?#])/i.test(item.url || '') ? 'video' : 'image') as 'image' | 'video',
+                        title: item.alt || 'Review media',
+                      })) || [];
+                      setSelectedMediaList(mediaList);
+                      setSelectedMediaIndex(mediaList.findIndex(item => item.uri === media.url));
+                      setSelectedMedia({uri: media.url as string, type: 'video', title: media.alt || 'Review video'});
+                    }} style={styles.reviewVideoLink}>
                       <Text style={styles.reviewVideoText}>▶ Video</Text>
                     </Pressable>
                   ) : null)}
@@ -744,7 +794,7 @@ export const TourDetailScreen: React.FC<TourDetailScreenProps> = ({
       {/* Fullscreen Media Viewer with Prev/Next Navigation */}
       {selectedMedia && (
         <MediaViewer
-          mediaList={(activeSeason?.gallery || [])
+          mediaList={selectedMediaList || (activeSeason?.gallery || [])
             .filter(item => Boolean(item.url))
             .map(item => ({
               uri: item.url as string,
@@ -753,7 +803,10 @@ export const TourDetailScreen: React.FC<TourDetailScreenProps> = ({
             }))}
           initialIndex={selectedMediaIndex}
           media={selectedMedia}
-          onClose={() => setSelectedMedia(null)}
+          onClose={() => {
+            setSelectedMedia(null);
+            setSelectedMediaList(null);
+          }}
         />
       )}
       {/* Departure Date Detail Modal matching Web App */}
