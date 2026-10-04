@@ -14,6 +14,7 @@ import {
   Platform,
 } from 'react-native';
 import { BlurView } from '@react-native-community/blur';
+import Feather from 'react-native-vector-icons/Feather';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/theme';
 import { useAppDialog } from '../components/AppDialog';
@@ -23,6 +24,7 @@ import { NavScreen } from '../types';
 import { CustomDateField } from '../components/CustomDatePicker';
 
 interface EnquiryScreenProps {
+  onBack: () => void;
   onNavigate?: (screen: NavScreen) => void;
   onEnquirySubmitted?: (enquiry: any) => void;
   user?: import('../api/tourApi').AuthUser | null;
@@ -176,6 +178,7 @@ const enquiryTypeOptions: ChipOption[] = Object.entries(enums.EnquiryType)
   }));
 
 export const EnquiryScreen: React.FC<EnquiryScreenProps> = ({
+  onBack,
   onEnquirySubmitted,
   user: initialUser,
   prefilled,
@@ -379,6 +382,20 @@ export const EnquiryScreen: React.FC<EnquiryScreenProps> = ({
 
   return (
     <View style={styles.container}>
+      <View style={styles.navigationHeader}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+          style={styles.backButton}
+          onPress={onBack}
+        >
+          <Feather name="arrow-left" size={21} color={COLORS.text} />
+        </Pressable>
+        <View style={styles.navigationHeaderCopy}>
+          <Text style={styles.navigationTitle}>Enquiry</Text>
+          <Text style={styles.navigationSubtitle}>Plan your next journey</Text>
+        </View>
+      </View>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -749,6 +766,37 @@ const makeStyles = (COLORS: ReturnType<typeof useTheme>['colors'], isDark: boole
     container: {
       flex: 1,
       backgroundColor: COLORS.bg,
+    },
+    navigationHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: COLORS.border,
+      backgroundColor: COLORS.card,
+    },
+    backButton: {
+      width: 38,
+      height: 38,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: COLORS.surface,
+      marginRight: 11,
+    },
+    navigationHeaderCopy: {
+      flex: 1,
+    },
+    navigationTitle: {
+      color: COLORS.text,
+      fontSize: 17,
+      fontWeight: '900',
+    },
+    navigationSubtitle: {
+      color: COLORS.textMuted,
+      fontSize: 11,
+      marginTop: 2,
     },
     scrollView: {
       flex: 1,

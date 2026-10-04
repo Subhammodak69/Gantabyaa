@@ -694,6 +694,7 @@ function AppInner() {
       case 'enquiry':
         return (
           <EnquiryScreen
+            onBack={goBack}
             onNavigate={navigateTo}
             onEnquirySubmitted={handleEnquirySubmitted}
             user={user}
