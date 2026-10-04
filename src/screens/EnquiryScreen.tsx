@@ -26,10 +26,32 @@ interface EnquiryScreenProps {
   onNavigate?: (screen: NavScreen) => void;
   onEnquirySubmitted?: (enquiry: any) => void;
   user?: import('../api/tourApi').AuthUser | null;
-  prefilled?: { tourTitle?: string; packageId?: string; destinationId?: string; destinationName?: string; variantId?: string; travelDate?: string } | null;
+  prefilled?: {
+    tourTitle?: string;
+    packageId?: string;
+    destinationId?: string;
+    destinationName?: string;
+    variantId?: string;
+    travelDate?: string;
+    durationDays?: number;
+    durationNights?: number;
+  } | null;
 }
 
 type ChipOption = { label: string; value: string };
+
+function durationNumber(value: unknown): number | undefined {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string' && value.trim() !== '' && Number.isFinite(Number(value))) {
+    return Number(value);
+  }
+  if (Array.isArray(value)) return durationNumber(value[0]);
+  if (value && typeof value === 'object' && 'items' in value) {
+    const items = (value as { items?: unknown }).items;
+    return Array.isArray(items) ? durationNumber(items[0]) : undefined;
+  }
+  return undefined;
+}
 
 function SearchableSelect({
   options,
@@ -194,6 +216,18 @@ export const EnquiryScreen: React.FC<EnquiryScreenProps> = ({
   const [specialRequirements, setSpecialRequirements] = useState('');
   const [enquiryType, setEnquiryType] = useState('CUSTOM_TOUR');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const selectedPackage = packages.find(item => item.id === packageId);
+  const selectedVariant = variants.find(item =>
+    item.id === variantId || item.key === variantId || item.name === variantId,
+  ) || variants.find(item => item.is_default) || variants[0];
+  const isPackageEnquiry = selectionMode === 'PACKAGE' && Boolean(packageId);
+  const usesPrefilledVariant = packageId === prefilled?.packageId && variantId === prefilled?.variantId;
+  const resolvedTravelDurationDay = isPackageEnquiry
+    ? durationNumber(selectedVariant?.duration_days) ?? (usesPrefilledVariant ? durationNumber(prefilled?.durationDays) : undefined) ?? durationNumber(selectedPackage?.duration_days) ?? 0
+    : Number(travelDurationDay) || 0;
+  const resolvedTravelDurationNight = isPackageEnquiry
+    ? durationNumber(selectedVariant?.duration_nights) ?? (usesPrefilledVariant ? durationNumber(prefilled?.durationNights) : undefined) ?? durationNumber(selectedPackage?.duration_nights) ?? 0
+    : Number(travelDurationNight) || 0;
 
   React.useEffect(() => {
     fetchTourPackages(1, 50).then(setPackages).catch(() => setPackages([]));
@@ -201,7 +235,6 @@ export const EnquiryScreen: React.FC<EnquiryScreenProps> = ({
   }, []);
 
   React.useEffect(() => {
-    const selectedPackage = packages.find(item => item.id === packageId);
     const packageRef = selectedPackage?.slug || (selectedPackage ? packageId : '');
     if (!packageRef) {
       setVariants([]);
@@ -214,9 +247,13 @@ export const EnquiryScreen: React.FC<EnquiryScreenProps> = ({
           item.id === variantId || item.key === variantId || item.name === variantId,
         );
         if (current && current.id !== variantId) setVariantId(current.id);
+        else if (!current && result.variants.length > 0) {
+          const defaultVariant = result.variants.find(item => item.is_default) || result.variants[0];
+          setVariantId(defaultVariant.id);
+        }
       })
       .catch(() => setVariants([]));
-  }, [packageId, packages, variantId]);
+  }, [packageId, packages, selectedPackage, variantId]);
 
   React.useEffect(() => {
     if (!destinationId) {
@@ -304,8 +341,8 @@ export const EnquiryScreen: React.FC<EnquiryScreenProps> = ({
         phone: mobile.trim(),
         email: email.trim(),
         travel_date: travelDate.trim(),
-        travel_duration_day: Number(travelDurationDay) || 0,
-        travel_duration_night: Number(travelDurationNight) || 0,
+        travel_duration_day: resolvedTravelDurationDay,
+        travel_duration_night: resolvedTravelDurationNight,
         adult_count: Number(adultCount) || 0,
         child_count: Number(childCount) || 0,
         senior_count: Number(seniorCount) || 0,
@@ -488,23 +525,29 @@ export const EnquiryScreen: React.FC<EnquiryScreenProps> = ({
           <View style={styles.col}>
             <Text style={styles.label}>DAYS</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, isPackageEnquiry && styles.readOnlyInput]}
               placeholder="0"
               placeholderTextColor={COLORS.textMuted}
               keyboardType="numeric"
-              value={travelDurationDay}
+              value={String(resolvedTravelDurationDay)}
               onChangeText={setTravelDurationDay}
+              editable={!isPackageEnquiry}
+              selectTextOnFocus={!isPackageEnquiry}
+              accessibilityLabel={isPackageEnquiry ? 'Package duration in days, read only' : 'Travel duration in days'}
             />
           </View>
           <View style={styles.col}>
             <Text style={styles.label}>NIGHTS</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, isPackageEnquiry && styles.readOnlyInput]}
               placeholder="0"
               placeholderTextColor={COLORS.textMuted}
               keyboardType="numeric"
-              value={travelDurationNight}
+              value={String(resolvedTravelDurationNight)}
               onChangeText={setTravelDurationNight}
+              editable={!isPackageEnquiry}
+              selectTextOnFocus={!isPackageEnquiry}
+              accessibilityLabel={isPackageEnquiry ? 'Package duration in nights, read only' : 'Travel duration in nights'}
             />
           </View>
         </View>
@@ -772,6 +815,10 @@ const makeStyles = (COLORS: ReturnType<typeof useTheme>['colors'], isDark: boole
       paddingVertical: 12,
       fontSize: 14,
       color: COLORS.text,
+    },
+    readOnlyInput: {
+      backgroundColor: isDark ? COLORS.bg : '#F1F5F9',
+      color: COLORS.textSecondary,
     },
     selectButton: {
       minHeight: 48,

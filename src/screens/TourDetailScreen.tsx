@@ -34,6 +34,8 @@ interface TourDetailScreenProps {
     variantId: string;
     destinationId: string;
     travelDate: string;
+    durationDays?: number;
+    durationNights?: number;
   }) => void;
   isSaved?: boolean;
   onToggleSave?: () => void;
@@ -240,6 +242,8 @@ export const TourDetailScreen: React.FC<TourDetailScreenProps> = ({
       variantId: activeSeason.id,
       destinationId: (tour as any).destination_id || '',
       travelDate: selectedDate || (activeSeason.dates?.[0]?.date ?? ''),
+      durationDays: activeSeason.duration_days,
+      durationNights: activeSeason.duration_nights,
     });
   };
 
@@ -1011,6 +1015,8 @@ export const TourDetailScreen: React.FC<TourDetailScreenProps> = ({
                         variantId: activeSeason?.id || '',
                         destinationId: (tour as any)?.destination_id || '',
                         travelDate: chosenDate,
+                        durationDays: activeSeason?.duration_days || 0,
+                        durationNights: activeSeason?.duration_nights || 0,
                       });
                     }}
                   >

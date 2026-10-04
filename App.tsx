@@ -188,6 +188,8 @@ function AppInner() {
     destinationId?: string;
     destinationName?: string;
     travelDate?: string;
+    durationDays?: number;
+    durationNights?: number;
   } | null>(null);
 
   // User state
@@ -510,6 +512,8 @@ function AppInner() {
     variantId: string;
     destinationId: string;
     travelDate: string;
+    durationDays?: number;
+    durationNights?: number;
   }) => {
     const matchedTour = tours.find(t => t.slug === details.tourSlug) || null;
     setPrefilledEnquiry({
@@ -521,6 +525,8 @@ function AppInner() {
       destinationId: (matchedTour as any)?.destination_id || details.destinationId || '',
       destinationName: matchedTour?.destination || matchedTour?.title || details.tourTitle,
       travelDate: details.travelDate || '',
+      durationDays: details.durationDays,
+      durationNights: details.durationNights,
     });
     navigateTo('enquiry');
     trackVisitorEvent('enquiry_started', currentScreenRef.current, details);
