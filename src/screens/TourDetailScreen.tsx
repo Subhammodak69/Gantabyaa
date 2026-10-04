@@ -16,7 +16,8 @@ import { useColors } from '../theme/theme';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import Video from 'react-native-video';
 import { TourPackageDetail, TourPackageSummary, SeasonVariant, NavScreen } from '../types';
-import { fetchTourDetail, fetchTourVariant, getTourWebUrl, openWhatsAppChat, submitReviewApi, updateReviewApi, fetchPackageReviews, fetchReviewEligibility } from '../api/tourApi';
+import { fetchTourDetail, fetchTourVariant, fetchRulesRegulations, getTourWebUrl, openWhatsAppChat, submitReviewApi, updateReviewApi, fetchPackageReviews, fetchReviewEligibility } from '../api/tourApi';
+import { RuleRegulation } from '../api/types';
 import { TourDetailSkeleton } from '../components/Skeleton';
 import { MediaViewer, MediaSelection } from '../components/MediaViewer';
 import { showApiError } from '../utils/toast';
@@ -92,6 +93,9 @@ export const TourDetailScreen: React.FC<TourDetailScreenProps> = ({
   } | null>(null);
   const [reviewEligibilityLoading, setReviewEligibilityLoading] = useState(false);
   const [editingReview, setEditingReview] = useState(false);
+  const [rulesRegulations, setRulesRegulations] = useState<RuleRegulation[]>([]);
+  const [rulesLoading, setRulesLoading] = useState(false);
+  const [rulesError, setRulesError] = useState('');
 
   const loadDetail = useCallback(async () => {
     setLoading(true);
@@ -118,6 +122,27 @@ export const TourDetailScreen: React.FC<TourDetailScreenProps> = ({
   }, [slug, initialTour]);
 
   useEffect(() => { loadDetail(); }, [loadDetail]);
+
+  const loadRulesRegulations = useCallback(async () => {
+    if (!tour?.type) return;
+    setRulesLoading(true);
+    setRulesError('');
+    try {
+      const rules = await fetchRulesRegulations(tour.type === 'DOMESTIC' ? 'dom' : 'int');
+      setRulesRegulations(rules);
+    } catch (error) {
+      setRulesRegulations([]);
+      setRulesError(error instanceof Error ? error.message : 'Could not load package rules and regulations.');
+    } finally {
+      setRulesLoading(false);
+    }
+  }, [tour?.type]);
+
+  useEffect(() => {
+    setRulesRegulations([]);
+    setRulesError('');
+    if (tour?.type) loadRulesRegulations();
+  }, [loadRulesRegulations, tour?.type]);
 
   useEffect(() => {
     let active = true;
@@ -647,6 +672,35 @@ export const TourDetailScreen: React.FC<TourDetailScreenProps> = ({
           ))}
         </View>
 
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>Rules &amp; Regulations</Text>
+          <Text style={styles.sectionSubtitle}>
+            {isDomestic ? 'Domestic tour' : 'International tour'} travel requirements
+          </Text>
+          {rulesLoading ? (
+            <View style={styles.rulesLoading}>
+              <ActivityIndicator color={COLORS.primary} size="small" />
+              <Text style={styles.rulesMessage}>Loading rules and regulations...</Text>
+            </View>
+          ) : rulesError ? (
+            <View>
+              <Text style={styles.rulesError}>{rulesError}</Text>
+              <Pressable onPress={loadRulesRegulations} style={styles.rulesRetry}>
+                <Text style={styles.rulesRetryText}>Try again</Text>
+              </Pressable>
+            </View>
+          ) : rulesRegulations.length ? (
+            rulesRegulations.map(rule => (
+              <View key={rule.id} style={styles.ruleItem}>
+                <Text style={styles.ruleTitle}>{rule.rule_title}</Text>
+                {!!rule.regulations && <Text style={styles.ruleText}>{rule.regulations}</Text>}
+              </View>
+            ))
+          ) : (
+            <Text style={styles.rulesMessage}>No additional rules or regulations are available for this package.</Text>
+          )}
+        </View>
+
         {/* Reviews Section */}
         <View style={styles.sectionCard}>
           <View style={styles.reviewSummaryHeader}>
@@ -973,6 +1027,50 @@ export const TourDetailScreen: React.FC<TourDetailScreenProps> = ({
 };
 
 const makeStyles = (COLORS: ReturnType<typeof useColors>) => StyleSheet.create({
+  rulesLoading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  rulesMessage: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    lineHeight: 19,
+  },
+  rulesError: {
+    fontSize: 13,
+    color: COLORS.danger,
+    lineHeight: 19,
+  },
+  rulesRetry: {
+    alignSelf: 'flex-start',
+    marginTop: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: COLORS.primary,
+  },
+  rulesRetryText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  ruleItem: {
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  ruleTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: 4,
+  },
+  ruleText: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    lineHeight: 19,
+  },
   exclusionsTitle: {
     marginTop: 16,
   },

@@ -3,6 +3,7 @@ import { request, authenticated, getAccessToken, BASE_API, WEB_APP_URL } from '.
 import {
   ApiEnvelope,
   DestinationRecord,
+  RuleRegulation,
   UploadedFileData,
 } from './types';
 import {
@@ -18,6 +19,25 @@ export function getTourWebUrl(slug: string): string {
   return `${WEB_APP_URL}/journey/${encodeURIComponent(slug)}`;
 }
 
+function textValue(value: any): string {
+  if (typeof value === 'string' || typeof value === 'number') return String(value);
+  if (!value || typeof value !== 'object') return '';
+
+  for (const key of ['text', 'title', 'name', 'label', 'description', 'value']) {
+    const text = textValue(value[key]);
+    if (text) return text;
+  }
+
+  return Array.isArray(value.items)
+    ? value.items.map(textValue).filter(Boolean).join('\n')
+    : '';
+}
+
+function listValue(value: any): any[] {
+  if (Array.isArray(value)) return value;
+  return Array.isArray(value?.items) ? value.items : [];
+}
+
 function formatVariant(v: any, i = 0): SeasonVariant {
   const realId = v.variant_id || v.id;
   const price = v.selling_price ?? v.price ?? v.starting_price ?? v.list_price ?? 0;
@@ -26,15 +46,15 @@ function formatVariant(v: any, i = 0): SeasonVariant {
     key: v.slug || `variant-${i}`,
     display_order: i,
     variant_code: v.slug || '',
-    name: v.name || v.season_name || '',
-    badge: v.badge,
+    name: textValue(v.name || v.season_name),
+    badge: textValue(v.badge),
     season_type: '',
     season_name: v.season_name || '',
     cover_image: v.banner?.image || v.cover_image || '',
     banner_video: v.banner?.video || '',
     valid_from: v.valid_from || '',
     valid_to: v.valid_to || '',
-    duration: `${v.duration_nights ?? 0}N | ${v.duration_days ?? 0}D`,
+    duration: `${textValue(v.duration_nights) || 0}N | ${textValue(v.duration_days) || 0}D`,
     duration_days: Number(v.duration_days || 0),
     duration_nights: Number(v.duration_nights || 0),
     price: Number(price || 0),
@@ -44,13 +64,16 @@ function formatVariant(v: any, i = 0): SeasonVariant {
     availability: v.availability || (Number(v.available_seats ?? 0) > 0 ? 'AVAILABLE' : 'SOLD_OUT'),
     is_active: true,
     is_default: i === 0,
-    route: (v.route || []).map((x: any) => ({
+    route: listValue(v.route).map((x: any) => ({
       id: String(x.id || ''),
-      place: x.city || x.place || '',
+      place: textValue(x.city) || textValue(x.place),
       nights: Number(x.nights || 0),
-    } as any)),
-    highlights: v.highlights || [],
-    dates: (v.departure_dates || v.dates || []).map((x: any) => ({
+    })),
+    highlights: listValue(v.highlights).map((highlight: any, index: number) => ({
+      id: String(highlight?.id || index),
+      text: textValue(highlight?.text ?? highlight),
+    })),
+    dates: listValue(v.departure_dates || v.dates).map((x: any) => ({
       id: String(x.id || ''),
       date: x.departure_date || x.date || '',
       departure_date: x.departure_date || x.date || '',
@@ -58,7 +81,7 @@ function formatVariant(v: any, i = 0): SeasonVariant {
       total_seats: x.total_seats != null ? Number(x.total_seats) : undefined,
       available_seats: x.available_seats != null ? Number(x.available_seats) : undefined,
     })),
-    gallery: (v.gallery || []).map((x: any) => ({
+    gallery: listValue(v.gallery).map((x: any) => ({
       id: String(x.id || ''),
       photoId: x.url || '',
       url: x.url,
@@ -66,29 +89,30 @@ function formatVariant(v: any, i = 0): SeasonVariant {
       type: x.type,
       display_order: x.display_order,
     })),
-    itinerary: (v.itinerary || []).map((x: any) => ({
+    itinerary: listValue(v.itinerary).map((x: any) => ({
       id: String(x.id || ''),
       day: String(x.day || ''),
-      title: x.title,
-      description: x.description || '',
+      title: textValue(x.title),
+      description: textValue(x.description),
     })),
-    inclusions: v.inclusions || [],
-    exclusions: v.exclusions || [],
+    inclusions: listValue(v.inclusions).map(textValue).filter(Boolean),
+    exclusions: listValue(v.exclusions).map(textValue).filter(Boolean),
   };
 }
 
 function formatSummary(x: any): TourPackageSummary {
   return {
     ...x,
-    tour_code: x.tour_code || x.code || '',
+    tour_code: textValue(x.tour_code) || textValue(x.code),
     slug: x.slug || x.id,
-    destination: x.destination_name || x.destination || '',
-    description: x.description || '',
+    title: textValue(x.title),
+    destination: textValue(x.destination_name) || textValue(x.destination),
+    description: textValue(x.description),
     variant_count: Number(x.variant_count || 0),
     starting_price: Number(x.selling_price ?? x.starting_price ?? x.price ?? 0),
     duration_days: Number(x.duration_days ?? 0),
     duration_nights: Number(x.duration_nights ?? 0),
-    duration: x.duration || '',
+    duration: textValue(x.duration),
     cover_image: x.cover_image || x.banner?.image || '',
     banner_video: x.banner_video || x.banner?.video || '',
     season_name: x.season_name || '',
@@ -141,6 +165,26 @@ export async function fetchDestinations(
   return Array.isArray(response.data) ? response.data : [];
 }
 
+export async function fetchRulesRegulations(
+  type: 'dom' | 'int'
+): Promise<RuleRegulation[]> {
+  const params = new URLSearchParams({ type });
+  const response = await request<ApiEnvelope<RuleRegulation[]>>(
+    `/api/v1/rules-regulations?${params.toString()}`
+  );
+  const rules = Array.isArray(response.data)
+    ? response.data
+    : listValue(response.data);
+  return rules
+    .filter(rule => rule?.is_active !== false)
+    .map(rule => ({
+      ...rule,
+      id: String(rule.id || ''),
+      rule_title: textValue(rule.rule_title),
+      regulations: rule.regulations == null ? null : textValue(rule.regulations),
+    }));
+}
+
 export async function fetchAllDestinations(pageSize = 100): Promise<DestinationRecord[]> {
   const destinations: DestinationRecord[] = [];
   let page = 1;
@@ -183,7 +227,7 @@ export async function fetchTourDetail(
 ): Promise<TourPackageDetail> {
   let d: any;
   if (initialTour) {
-    d = { ...initialTour, id: initialTour.id, slug: initialTour.slug || slug };
+    d = formatSummary({ ...initialTour, id: initialTour.id, slug: initialTour.slug || slug });
   } else {
     // The end-user API exposes package lists and variant details, not a
     // singular /tour-packages/{slug} route.
@@ -207,14 +251,18 @@ export async function fetchTourDetail(
   }
   return {
     ...d,
-    destination: d.destination_name || d.destination || '',
+    title: textValue(d.title),
+    destination: textValue(d.destination_name) || textValue(d.destination),
     is_featured: Boolean(d.is_featured),
     is_active: d.is_active !== false,
     seasons,
-    reviews: (d.reviews || []).map((review: any) => ({
+    reviews: listValue(d.reviews).map((review: any) => ({
       ...review,
+      name: textValue(review.name) || textValue(review.reviewer_by) || 'Verified Traveler',
+      reviewer_by: textValue(review.reviewer_by),
+      review: textValue(review.review),
       is_verified: true,
-      review_gallery: (review.review_gallery || []).map((item: any) => ({
+      review_gallery: listValue(review.review_gallery).map((item: any) => ({
         id: item.id,
         url: item.url,
         alt: item.alt,
@@ -249,18 +297,18 @@ export async function fetchPackageReviews(
     const r = await request<ApiEnvelope<any>>(
       `/api/v1/reviews/package/${encodeURIComponent(slug)}?page=${page}&page_size=${pageSize}`
     );
-    const items = Array.isArray(r.data) ? r.data : r.data?.items || [];
+    const items = listValue(r.data);
     const reviews: Review[] = items.map((review: any) => ({
       id: review.id,
       review_code: review.review_code || '',
-      name: review.name || review.reviewer_by || 'Verified Traveler',
+      name: textValue(review.name) || textValue(review.reviewer_by) || 'Verified Traveler',
       rating: Number(review.rating || 5),
-      review: review.review || '',
+      review: textValue(review.review),
       is_verified: Boolean(review.is_verified ?? true),
       is_published: Boolean(review.is_published ?? true),
-      reviewer_by: review.reviewer_by,
+      reviewer_by: textValue(review.reviewer_by),
       reviewer_pic: review.reviewer_pic,
-      review_gallery: (review.review_gallery || []).map((item: any) => ({
+      review_gallery: listValue(review.review_gallery).map((item: any) => ({
         id: item.id || item.url,
         url: item.url,
         alt: item.alt,

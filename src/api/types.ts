@@ -5,6 +5,16 @@ export type ApiEnvelope<T> = {
   pagination?: any;
 };
 
+export interface RuleRegulation {
+  id: string;
+  rule_title: string;
+  regulations: string | null;
+  type: 'DOMESTIC' | 'INTERNATIONAL';
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface EnumOption {
   value: string;
   label: string;
