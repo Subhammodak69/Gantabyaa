@@ -1174,13 +1174,9 @@ const makeStyles = (COLORS: ReturnType<typeof useColors>) => StyleSheet.create({
     marginTop: 4,
   },
   sectionCard: {
-    backgroundColor: COLORS.card,
     marginHorizontal: 16,
-    marginTop: 14,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    marginTop: 8,
+    paddingVertical: 14,
   },
   sectionTitle: {
     fontSize: 17,
