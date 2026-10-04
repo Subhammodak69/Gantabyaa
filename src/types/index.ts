@@ -123,6 +123,8 @@ export interface TourPackageDetail {
 
 export interface EnquiryData {
   id?: string;
+  package_id?: string;
+  variant_id?: string;
   tourSlug?: string;
   tourTitle?: string;
   destination?: string;
