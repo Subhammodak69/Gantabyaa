@@ -174,6 +174,15 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
 
           <Pressable
             style={styles.menuItem}
+            onPress={() => handleNav('ranking')}
+          >
+            <Text style={styles.menuIcon}>🏆</Text>
+            <Text style={styles.menuLabel}>Public leaderboard</Text>
+            <Text style={styles.menuArrow}>›</Text>
+          </Pressable>
+
+          <Pressable
+            style={styles.menuItem}
             onPress={() => {
               onClose();
               if (onOpenCustomTour) onOpenCustomTour();

@@ -47,6 +47,8 @@ import { EditEnquiryScreen } from './src/screens/EditEnquiryScreen';
 import { EnquiryDetailsScreen } from './src/screens/EnquiryDetailsScreen';
 import { BookingDetailsScreen } from './src/screens/BookingDetailsScreen';
 import { WalletScreen } from './src/screens/WalletScreen';
+import { PointsScreen } from './src/screens/PointsScreen';
+import { RankingScreen } from './src/screens/RankingScreen';
 import { toastConfig } from './src/components/AppToast';
 import { showApiError } from './src/utils/toast';
 import { decodeReferral } from './src/utils/referral';
@@ -583,7 +585,7 @@ function AppInner() {
     setRootScreen('auth');
   };
 
-  const protectedScreens: NavScreen[] = ['profile', 'profile_details', 'edit_profile', 'sessions', 'my_trips', 'my_enquiries', 'edit_enquiry', 'enquiry_details', 'bills_invoices', 'invoice_details', 'booking_details', 'documents', 'document_viewer', 'wishlist', 'referrals', 'notifications'];
+  const protectedScreens: NavScreen[] = ['profile', 'profile_details', 'edit_profile', 'sessions', 'my_trips', 'my_enquiries', 'edit_enquiry', 'enquiry_details', 'bills_invoices', 'invoice_details', 'booking_details', 'documents', 'document_viewer', 'wishlist', 'referrals', 'notifications', 'points'];
   const navigateWithAuth = (screen: NavScreen) => {
     if (protectedScreens.includes(screen) && !isLoggedIn) { navigateTo('auth'); return; }
     navigateTo(screen);
@@ -769,6 +771,12 @@ function AppInner() {
 
       case 'wallet':
         return <WalletScreen onBack={goBack} />;
+
+      case 'points':
+        return <PointsScreen onBack={goBack} onOpenRanking={() => navigateTo('ranking')} />;
+
+      case 'ranking':
+        return <RankingScreen onBack={goBack} />;
 
       case 'invoice_details':
         return selectedInvoice ? <InvoiceDetailsScreen invoice={selectedInvoice} onBack={goBack} /> : <BillsInvoicesScreen onOpenInvoice={openInvoiceDetails} />;

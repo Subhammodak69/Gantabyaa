@@ -118,6 +118,7 @@ export const ProfileScreen: React.FC<Props> = ({
       <ProfileRow styles={styles} iconSet="feather" iconName="message-square" title="My enquiries" subtitle={`${enquiries.length} travel enquiries submitted`} onPress={() => onNavigate('my_enquiries')} />
       <ProfileRow styles={styles} iconSet="mci" iconName="currency-inr" title="Bills & invoices" subtitle="View your booking bills and invoices" onPress={() => onNavigate('bills_invoices')} />
       <ProfileRow styles={styles} iconSet="mci" iconName="wallet-outline" title="Wallet & transactions" subtitle="Balance and payment history" onPress={() => onNavigate('wallet')} />
+      <ProfileRow styles={styles} iconSet="feather" iconName="award" title="Travel points" subtitle="Points balance, rewards and your rank" onPress={() => onNavigate('points')} />
       <ProfileRow styles={styles} iconSet="feather" iconName="file-text" title="My documents" subtitle="Upload and manage incoming and outgoing files" onPress={() => onNavigate('documents')} />
       <ProfileRow styles={styles} iconSet="feather" iconName="heart" title="My wishlist" subtitle="Your saved travel packages" onPress={() => onNavigate('wishlist')} />
       <ProfileRow styles={styles} iconSet="feather" iconName="gift" title="Refer & earn" subtitle="Share your travel network" onPress={() => onNavigate('referrals')} />

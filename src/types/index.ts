@@ -183,6 +183,8 @@ export type NavScreen =
   | 'notifications'
   | 'profile'
   | 'wallet'
+  | 'points'
+  | 'ranking'
   | 'profile_details'
   | 'edit_profile'
   | 'sessions'

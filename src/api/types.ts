@@ -404,3 +404,43 @@ export interface PaginatedResult<T> {
   items: T[];
   pagination?: CustomerTourPagination;
 }
+
+export interface PointsCustomer {
+  rank: number;
+  customer_name: string;
+  customer_profile_picture?: string | null;
+  customer_joined_at?: string | null;
+  point_balance: number;
+}
+
+export interface PointsTransaction {
+  id: string;
+  booking_id?: string | null;
+  package_id?: string | null;
+  booking_code?: string | null;
+  tour_title?: string | null;
+  transaction_type: string;
+  points: number;
+  balance_before: string | number;
+  balance_after: string | number;
+  amount_per_point?: string | number | null;
+  reason?: string | null;
+  created_at: string;
+}
+
+export interface PointsPagination {
+  current_page: number;
+  has_next: boolean;
+  has_previous: boolean;
+  page_size: number;
+  total_items: number;
+  total_pages: number;
+}
+
+export interface AccountPoints {
+  points_balance: string | number;
+  rank: number;
+  around: PointsCustomer[];
+  transactions: PointsTransaction[];
+  transaction_pagination: PointsPagination;
+}

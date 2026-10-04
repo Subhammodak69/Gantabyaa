@@ -25,6 +25,9 @@ import {
   FinancialTransaction,
   PaginatedResult,
   EnumList,
+  AccountPoints,
+  PointsCustomer,
+  PointsPagination,
 } from './types';
 import { TravelDocument } from '../types';
 
@@ -389,4 +392,22 @@ export async function fetchTransactions(
     items: Array.isArray(response.data) ? response.data : [],
     pagination: response.pagination as CustomerTourPagination | undefined,
   };
+}
+
+export async function fetchAccountPoints(
+  page = 1,
+  pageSize = 20
+): Promise<ApiEnvelope<AccountPoints>> {
+  return authenticated<ApiEnvelope<AccountPoints>>(
+    `/api/v1/account/points?page=${page}&page_size=${pageSize}`
+  );
+}
+
+export async function fetchPublicRanking(
+  page = 1,
+  pageSize = 10
+): Promise<ApiEnvelope<PointsCustomer[]> & { pagination?: PointsPagination }> {
+  return request<ApiEnvelope<PointsCustomer[]> & { pagination?: PointsPagination }>(
+    `/api/v1/public/ranking?page=${page}&page_size=${pageSize}`
+  );
 }
