@@ -8,7 +8,7 @@ export type ApiEnvelope<T> = {
 export interface RuleRegulation {
   id: string;
   rule_title: string;
-  regulations: string | null;
+  regulations: string[] | string | null;
   type: 'DOMESTIC' | 'INTERNATIONAL';
   is_active: boolean;
   created_at: string;

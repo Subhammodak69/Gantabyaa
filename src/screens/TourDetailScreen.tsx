@@ -697,7 +697,16 @@ export const TourDetailScreen: React.FC<TourDetailScreenProps> = ({
             rulesRegulations.map(rule => (
               <View key={rule.id} style={styles.ruleItem}>
                 <Text style={styles.ruleTitle}>{rule.rule_title}</Text>
-                {!!rule.regulations && <Text style={styles.ruleText}>{rule.regulations}</Text>}
+                {Array.isArray(rule.regulations) ? (
+                  rule.regulations.map((regulation, index) => (
+                    <View key={`${rule.id}-regulation-${index}`} style={styles.ruleBulletRow}>
+                      <Text style={styles.ruleBullet}>•</Text>
+                      <Text style={styles.ruleText}>{regulation}</Text>
+                    </View>
+                  ))
+                ) : !!rule.regulations ? (
+                  <Text style={styles.ruleText}>{rule.regulations}</Text>
+                ) : null}
               </View>
             ))
           ) : (
@@ -1076,6 +1085,18 @@ const makeStyles = (COLORS: ReturnType<typeof useColors>) => StyleSheet.create({
     fontSize: 13,
     color: COLORS.textSecondary,
     lineHeight: 19,
+    flex: 1,
+  },
+  ruleBulletRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginTop: 5,
+  },
+  ruleBullet: {
+    color: COLORS.primary,
+    fontSize: 15,
+    lineHeight: 19,
+    marginRight: 8,
   },
   exclusionsTitle: {
     marginTop: 16,

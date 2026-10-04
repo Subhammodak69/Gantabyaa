@@ -38,6 +38,15 @@ function listValue(value: any): any[] {
   return Array.isArray(value?.items) ? value.items : [];
 }
 
+function regulationValue(value: unknown): string[] | string | null {
+  if (value == null) return null;
+  if (Array.isArray(value)) return value.map(textValue).filter(Boolean);
+  if (typeof value === 'object' && Array.isArray((value as { items?: unknown }).items)) {
+    return ((value as { items: unknown[] }).items).map(textValue).filter(Boolean);
+  }
+  return textValue(value);
+}
+
 function formatVariant(v: any, i = 0): SeasonVariant {
   const realId = v.variant_id || v.id;
   const price = v.selling_price ?? v.price ?? v.starting_price ?? v.list_price ?? 0;
@@ -181,7 +190,7 @@ export async function fetchRulesRegulations(
       ...rule,
       id: String(rule.id || ''),
       rule_title: textValue(rule.rule_title),
-      regulations: rule.regulations == null ? null : textValue(rule.regulations),
+      regulations: regulationValue(rule.regulations),
     }));
 }
 
