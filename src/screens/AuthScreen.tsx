@@ -279,7 +279,7 @@ export const AuthScreen: React.FC<Props> = ({ onLoginSuccess }) => {
           <Text style={styles.subtitle}>
             {mode === 'LOGIN'
               ? 'Manage bookings, tour enquiries, and travel plans from one place.'
-              : 'Join Gantabya to plan trips, save favourites, and get personalized offers.'}
+              : 'Join Gantabyaa to plan trips, save favourites, and get personalized offers.'}
           </Text>
         </View>
 

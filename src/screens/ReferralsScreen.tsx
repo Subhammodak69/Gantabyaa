@@ -36,7 +36,7 @@ export const ReferralsScreen: React.FC = () => {
   };
   useEffect(() => { load(); }, []);
   const handleRefresh = async () => { setRefreshing(true); try { await load(); } finally { setRefreshing(false); } };
-  const share = () => { if (shareLink) Share.share({message: `Join me on Gantabya and plan your next journey: ${shareLink}`}); };
+  const share = () => { if (shareLink) Share.share({message: `Join me on Gantabyaa and plan your next journey: ${shareLink}`}); };
   return <ScrollView style={styles.container} contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={[COLORS.primary]} />}>
     <Text style={styles.title}>Refer & earn</Text>
     <Text style={styles.subtitle}>Invite someone to discover their next journey.</Text>

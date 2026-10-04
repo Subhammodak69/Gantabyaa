@@ -363,7 +363,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           <View style={styles.reviewCard}>
             <Text style={styles.reviewStars}>★★★★★</Text>
             <Text style={styles.reviewQuote}>
-              “One of our best family trips. Gantabya provided delicious meals and 4-star stays throughout.”
+              “One of our best family trips. Gantabyaa provided delicious meals and 4-star stays throughout.”
             </Text>
             <Text style={styles.reviewerName}>Rahul Verma · Cooch Behar</Text>
           </View>

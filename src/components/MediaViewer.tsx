@@ -112,7 +112,7 @@ export const MediaViewer: React.FC<Props> = ({
   const share = () =>
     Share.share({
       message: currentMedia.uri,
-      title: currentMedia.title || 'Gantabya media',
+      title: currentMedia.title || 'Gantabyaa media',
     });
 
   return (
