@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Image,
   Pressable,
@@ -9,7 +9,7 @@ import {
   View,
 } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
-import { fetchPublicRanking } from '../api/tourApi';
+import { fetchAccountPoints, fetchPublicRanking } from '../api/tourApi';
 import { PointsCustomer, PointsPagination } from '../api/types';
 import { AppColors, useTheme } from '../theme/theme';
 
@@ -24,12 +24,16 @@ export const RankingScreen: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [locating, setLocating] = useState(false);
+  const [myRank, setMyRank] = useState<number | null>(null);
   const [error, setError] = useState('');
+  const scrollRef = useRef<React.ElementRef<typeof ScrollView>>(null);
 
   const loadRanking = useCallback(async (nextPage = 1, refresh = false) => {
     if (refresh) setRefreshing(true);
     else if (nextPage > 1) setLoadingMore(true);
     else setLoading(true);
+    if (nextPage === 1) setMyRank(null);
     setError('');
     try {
       const response = await fetchPublicRanking(nextPage, PAGE_SIZE);
@@ -46,6 +50,37 @@ export const RankingScreen: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     }
   }, []);
 
+  const showMyPosition = async () => {
+    setLocating(true);
+    setError('');
+    try {
+      const accountResponse = await fetchAccountPoints(1, 1);
+      const rank = Number(accountResponse.data?.rank);
+      if (!accountResponse.data || !Number.isInteger(rank) || rank < 1) {
+        throw new Error(accountResponse.message || 'Your leaderboard position could not be found.');
+      }
+
+      const targetPage = Math.ceil(rank / PAGE_SIZE);
+      const rankingResponse = await fetchPublicRanking(targetPage, PAGE_SIZE);
+      const pageCustomers = rankingResponse.data;
+      if (!Array.isArray(pageCustomers)) {
+        throw new Error(rankingResponse.message || 'Your leaderboard position could not be loaded.');
+      }
+      if (!pageCustomers.some(customer => Number(customer.rank) === rank)) {
+        throw new Error('Your position is not available on the public leaderboard yet.');
+      }
+
+      setCustomers(pageCustomers);
+      setPagination(rankingResponse.pagination);
+      setPage(targetPage);
+      setMyRank(rank);
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : 'Your leaderboard position could not be loaded.');
+    } finally {
+      setLocating(false);
+    }
+  };
+
   useEffect(() => { loadRanking(); }, [loadRanking]);
 
   return (
@@ -59,20 +94,32 @@ export const RankingScreen: React.FC<{ onBack: () => void }> = ({ onBack }) => {
           <Text style={styles.headerSubtitle}>Celebrating our traveling community</Text>
         </View>
       </View>
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadRanking(1, true)} colors={[colors.primary]} />}>
+      <ScrollView ref={scrollRef} style={styles.scroll} contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadRanking(1, true)} colors={[colors.primary]} />}>
         <View style={styles.hero}>
           <Feather name="award" size={27} color={colors.gold} />
           <Text style={styles.heroTitle}>Every journey earns a place.</Text>
           <Text style={styles.heroSubtitle}>See how Gantabyaa travelers rank by points.</Text>
+          <Pressable style={styles.myPositionButton} disabled={locating || loading} onPress={showMyPosition}>
+            <Feather name={locating ? 'loader' : 'crosshair'} size={15} color={colors.primaryDark} />
+            <Text style={styles.myPositionButtonText}>{locating ? 'Finding your position…' : 'Show my position'}</Text>
+          </Pressable>
         </View>
         {!!error && <View style={styles.errorBox}><Text style={styles.errorText}>{error}</Text><Pressable onPress={() => loadRanking()}><Text style={styles.retry}>Retry</Text></Pressable></View>}
         {loading && customers.length === 0 ? <Text style={styles.empty}>Loading leaderboard…</Text> : customers.length ? customers.map((customer, index) => (
-          <View key={`${customer.rank}-${customer.customer_name}-${index}`} style={styles.row}>
+          <View
+            key={`${customer.rank}-${customer.customer_name}-${index}`}
+            style={[styles.row, Number(customer.rank) === myRank && styles.myPositionRow]}
+            onLayout={event => {
+              if (Number(customer.rank) === myRank) {
+                scrollRef.current?.scrollTo({ y: Math.max(0, event.nativeEvent.layout.y - 12), animated: true });
+              }
+            }}
+          >
             <View style={[styles.rankBadge, customer.rank <= 3 && styles.topRank]}><Text style={[styles.rankText, customer.rank <= 3 && styles.topRankText]}>{customer.rank}</Text></View>
             {customer.customer_profile_picture
               ? <Image source={{ uri: customer.customer_profile_picture }} style={styles.avatar} />
               : <View style={[styles.avatar, styles.avatarFallback]}><Text style={styles.initial}>{customer.customer_name?.charAt(0)?.toUpperCase() || '?'}</Text></View>}
-            <View style={styles.customerCopy}><Text style={styles.name} numberOfLines={1}>{customer.customer_name || 'Traveler'}</Text><Text style={styles.joined}>Traveler since {formatDate(customer.customer_joined_at)}</Text></View>
+            <View style={styles.customerCopy}><Text style={styles.name} numberOfLines={1}>{customer.customer_name || 'Traveler'}{Number(customer.rank) === myRank ? ' · YOU' : ''}</Text><Text style={styles.joined}>Traveler since {formatDate(customer.customer_joined_at)}</Text></View>
             <View style={styles.points}><Text style={styles.pointsValue}>{Number(customer.point_balance).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</Text><Text style={styles.pointsLabel}>POINTS</Text></View>
           </View>
         )) : !error ? <Text style={styles.empty}>No rankings to show right now.</Text> : null}
@@ -105,7 +152,10 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   hero: { padding: 19, backgroundColor: colors.primaryDark, borderRadius: 17, marginBottom: 16 },
   heroTitle: { fontSize: 19, fontWeight: '900', color: colors.textLight, marginTop: 12 },
   heroSubtitle: { fontSize: 11, lineHeight: 17, color: colors.textSecondary, marginTop: 5 },
+  myPositionButton: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 12, paddingVertical: 9, borderRadius: 10, backgroundColor: colors.textLight, marginTop: 14 },
+  myPositionButtonText: { color: colors.primaryDark, fontSize: 11, fontWeight: '900' },
   row: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.card, borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: 10, marginBottom: 8 },
+  myPositionRow: { backgroundColor: colors.primarySubtle, borderColor: colors.primary, borderWidth: 2 },
   rankBadge: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center', borderRadius: 9, backgroundColor: colors.surface, marginRight: 9 },
   topRank: { backgroundColor: colors.goldLight },
   rankText: { fontSize: 11, fontWeight: '900', color: colors.textSecondary },
