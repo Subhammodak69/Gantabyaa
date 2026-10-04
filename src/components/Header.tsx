@@ -15,7 +15,7 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({
-  title = 'GANTABYA',
+  title = 'GANTABYAA',
   showBack = false,
   onBack,
   onOpenMenu,

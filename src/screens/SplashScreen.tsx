@@ -62,7 +62,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
               resizeMode="contain"
             />
           </View>
-          <Text style={styles.brandTitle}>GANTABYA</Text>
+          <Text style={styles.brandTitle}>GANTABYAA</Text>
           <Text style={styles.brandSubtitle}>TRAVEL</Text>
           <View style={styles.goldLine} />
           <Text style={styles.tagline}>Explore the World with Us</Text>

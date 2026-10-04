@@ -270,7 +270,7 @@ export const AuthScreen: React.FC<Props> = ({ onLoginSuccess }) => {
               resizeMode="contain"
             />
           </View>
-          <Text style={styles.brandTitle}>GANTABYA</Text>
+          <Text style={styles.brandTitle}>GANTABYAA</Text>
           <Text style={styles.title}>
             {mode === 'LOGIN'
               ? 'Log in to stay on top of your journeys.'
