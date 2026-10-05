@@ -68,6 +68,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
       >
         {/* Match the transparent logo lockup used on the auth screen. */}
         <View style={styles.logoContainer}>
+          <Text style={styles.brandEyebrow}>TRAVEL · DISCOVER · REPEAT</Text>
           <View style={styles.logoCircle}>
             <Image
               source={require('../assets/gantabya-transparent.png')}
@@ -77,29 +78,36 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
           </View>
           <Text style={styles.brandTitle}>GANTABYAA</Text>
           <Text style={styles.brandSubtitle}>TRAVEL</Text>
-          <View style={styles.goldLine} />
+          <View style={styles.brandDivider}>
+            <View style={styles.goldLine} />
+            <Text style={styles.brandSince}>EST. 1994</Text>
+            <View style={styles.goldLine} />
+          </View>
           <Text style={styles.tagline}>Explore the World with Us</Text>
         </View>
 
         {/* Feature Pills */}
         <View style={styles.featuresRow}>
           <View style={styles.featurePill}>
-            <Text style={styles.featurePillText}>✈️ 50+ Curated Tours</Text>
+            <Text style={styles.featurePillText}>✈️  Curated Tours</Text>
           </View>
           <View style={styles.featurePill}>
-            <Text style={styles.featurePillText}>🛡️ 100% Verified Stays</Text>
+            <Text style={styles.featurePillText}>🛡️  Verified Stays</Text>
           </View>
           <View style={styles.featurePill}>
-            <Text style={styles.featurePillText}>⭐ 30+ Years Trust</Text>
+            <Text style={styles.featurePillText}>⭐  Trusted Since 1994</Text>
           </View>
         </View>
 
-        <View style={styles.loadingArea}>
-          <ActivityIndicator size="small" color={COLORS.gold} />
-          <Text style={styles.loadingText}>Loading your journey…</Text>
-        </View>
+        {!showActions ? (
+          <View style={styles.loadingArea}>
+            <ActivityIndicator size="small" color={COLORS.gold} />
+            <Text style={styles.loadingText}>Preparing your next adventure</Text>
+          </View>
+        ) : null}
         {showActions ? (
           <View style={styles.actions}>
+            <Text style={styles.actionsHeading}>Your next journey starts here</Text>
             <Pressable
               onPress={onExplorePress ?? onFinished}
               style={({ pressed }) => [
@@ -147,18 +155,25 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    justifyContent: 'space-between',
-    padding: 24,
-    paddingTop: 80,
-    paddingBottom: 40,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 48,
+    paddingBottom: 32,
   },
   logoContainer: {
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 0,
+  },
+  brandEyebrow: {
+    color: '#FDE68A',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 2.4,
+    marginBottom: 8,
   },
   logoCircle: {
-    width: 208,
-    height: 194,
+    width: 104,
+    height: 98,
     borderRadius: 0,
     backgroundColor: 'transparent',
     padding: 0,
@@ -168,12 +183,12 @@ const styles = StyleSheet.create({
     overflow: 'visible',
   },
   brandLogo: {
-    width: 208,
-    height: 194,
+    width: 104,
+    height: 98,
     borderRadius: 0,
   },
   brandTitle: {
-    fontSize: 32,
+    fontSize: 30,
     fontWeight: '900',
     color: '#FFFFFF',
     letterSpacing: 4,
@@ -185,56 +200,77 @@ const styles = StyleSheet.create({
     letterSpacing: 6,
     marginTop: 2,
   },
+  brandDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginVertical: 12,
+  },
   goldLine: {
-    width: 60,
+    width: 34,
     height: 2,
     backgroundColor: COLORS.gold,
-    marginVertical: 14,
     borderRadius: 1,
   },
-  tagline: {
-    fontSize: 15,
-    color: '#E2E8F0',
-    fontWeight: '500',
+  brandSince: {
+    color: COLORS.gold,
+    fontSize: 9,
+    fontWeight: '800',
     letterSpacing: 1.5,
+  },
+  tagline: {
+    fontSize: 14,
+    color: '#E2E8F0',
+    fontWeight: '600',
+    letterSpacing: 0.6,
+    textAlign: 'center',
   },
   featuresRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
     gap: 8,
-    marginVertical: 20,
+    marginTop: 30,
   },
   featurePill: {
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 20,
+    paddingVertical: 8,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: 'rgba(255, 255, 255, 0.18)',
   },
   featurePillText: {
     color: '#FFFFFF',
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '600',
   },
   actions: {
     width: '100%',
+    marginTop: 30,
+  },
+  actionsHeading: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '800',
+    textAlign: 'center',
+    marginBottom: 16,
   },
   loadingArea: {
     alignItems: 'center',
-    marginTop: 24,
+    marginTop: 30,
   },
   loadingText: {
-    color: '#CBD5E1',
+    color: '#E2E8F0',
     fontSize: 12,
     fontWeight: '600',
-    marginTop: 10,
+    marginTop: 12,
+    letterSpacing: 0.3,
   },
   primaryBtn: {
     backgroundColor: COLORS.gold,
     paddingVertical: 15,
-    borderRadius: 10,
+    borderRadius: 14,
     alignItems: 'center',
     marginBottom: 12,
     elevation: 4,
@@ -252,7 +288,7 @@ const styles = StyleSheet.create({
   secondaryBtn: {
     backgroundColor: 'rgba(255, 255, 255, 0.12)',
     paddingVertical: 14,
-    borderRadius: 10,
+    borderRadius: 14,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.3)',
