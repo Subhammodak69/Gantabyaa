@@ -51,6 +51,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const featuredTours = tours.filter(t => t.is_featured);
   const domesticTours = tours.filter(t => t.type === 'DOMESTIC');
   const internationalTours = tours.filter(t => t.type === 'INTERNATIONAL');
+  const internationalPosterImage = internationalTours.find(t => t.cover_image?.trim())?.cover_image?.trim();
 
   return (
     <ScrollView
@@ -279,6 +280,21 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       </View>
 
       {/* International Escapes Section */}
+      <View style={styles.internationalPoster}>
+        {internationalPosterImage ? (
+          <Image
+            source={{ uri: internationalPosterImage }}
+            style={styles.internationalPosterImage}
+            resizeMode="cover"
+          />
+        ) : null}
+        <View style={styles.internationalPosterOverlay}>
+          <Text style={styles.internationalPosterEyebrow}>INTERNATIONAL TOURS</Text>
+          <Text style={styles.internationalPosterTitle}>The world is waiting</Text>
+          <Text style={styles.internationalPosterSubtitle}>Unforgettable journeys beyond borders</Text>
+        </View>
+      </View>
+
       <View style={styles.section}>
         <View style={styles.sectionHeaderRow}>
           <View>
@@ -548,6 +564,40 @@ const makeStyles = (COLORS: ReturnType<typeof useTheme>['colors'], isDark: boole
       fontSize: 10,
       color: isDark ? 'rgba(255, 255, 255, 0.7)' : '#475569',
       marginTop: 2,
+    },
+    internationalPoster: {
+      height: 190,
+      marginHorizontal: 16,
+      marginBottom: 8,
+      overflow: 'hidden',
+      borderRadius: 14,
+      backgroundColor: '#12304A',
+    },
+    internationalPosterImage: {
+      ...StyleSheet.absoluteFill,
+    },
+    internationalPosterOverlay: {
+      flex: 1,
+      justifyContent: 'flex-end',
+      padding: 12,
+      backgroundColor: 'rgba(5, 20, 38, 0.48)',
+    },
+    internationalPosterEyebrow: {
+      color: '#FDE68A',
+      fontSize: 9,
+      fontWeight: '900',
+      letterSpacing: 1,
+      marginBottom: 4,
+    },
+    internationalPosterTitle: {
+      color: '#FFFFFF',
+      fontSize: 15,
+      fontWeight: '900',
+    },
+    internationalPosterSubtitle: {
+      color: 'rgba(255, 255, 255, 0.88)',
+      fontSize: 10,
+      marginTop: 3,
     },
     section: {
       padding: 16,

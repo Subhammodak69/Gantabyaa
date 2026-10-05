@@ -42,10 +42,26 @@ export const TourListScreen: React.FC<TourListScreenProps> = ({
   const styles = makeStyles(COLORS);
   const [filterType, setFilterType] = useState<'ALL' | 'DOMESTIC' | 'INTERNATIONAL' | 'FEATURED' | 'SPECIAL_OFFER'>(initialFilter);
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<'recommended' | 'price_asc' | 'price_desc' | 'duration'>('recommended');
-  const [layoutMode, setLayoutMode] = useState<'vertical' | 'horizontal'>('vertical');
+  const [sortBy, setSortBy] = useState<'recommended' | 'duration'>('recommended');
+  const [featuredTours, setFeaturedTours] = useState<TourPackageSummary[] | null>(null);
+  const [featuredLoading, setFeaturedLoading] = useState(false);
+  const [featuredError, setFeaturedError] = useState<string | null>(null);
   const [specialOfferTours, setSpecialOfferTours] = useState<TourPackageSummary[] | null>(null);
   const [specialOfferLoading, setSpecialOfferLoading] = useState(false);
+
+  const loadFeaturedTours = useCallback(async () => {
+    setFeaturedLoading(true);
+    setFeaturedError(null);
+    try {
+      const items = await fetchTourPackages(1, 12, 'created_at', 'desc', { is_featured: true });
+      setFeaturedTours(items);
+    } catch (error) {
+      setFeaturedTours([]);
+      setFeaturedError(error instanceof Error ? error.message : 'Unable to load featured tours.');
+    } finally {
+      setFeaturedLoading(false);
+    }
+  }, []);
 
   const loadSpecialOffers = useCallback(async () => {
     setSpecialOfferLoading(true);
@@ -61,27 +77,46 @@ export const TourListScreen: React.FC<TourListScreenProps> = ({
 
   useEffect(() => {
     setFilterType(initialFilter);
-    if (initialFilter === 'SPECIAL_OFFER') {
+    if (initialFilter === 'FEATURED') {
+      loadFeaturedTours();
+      setSpecialOfferTours(null);
+    } else if (initialFilter === 'SPECIAL_OFFER') {
       loadSpecialOffers();
+      setFeaturedTours(null);
     } else {
+      setFeaturedTours(null);
       setSpecialOfferTours(null);
     }
-  }, [initialFilter, loadSpecialOffers]);
+  }, [initialFilter, loadFeaturedTours, loadSpecialOffers]);
 
   const changeFilter = (filter: 'ALL' | 'DOMESTIC' | 'INTERNATIONAL' | 'FEATURED' | 'SPECIAL_OFFER') => {
     setFilterType(filter);
-    if (filter === 'SPECIAL_OFFER') {
+    if (filter === 'FEATURED') {
+      loadFeaturedTours();
+      setSpecialOfferTours(null);
+    } else if (filter === 'SPECIAL_OFFER') {
       loadSpecialOffers();
+      setFeaturedTours(null);
     } else {
+      setFeaturedTours(null);
       setSpecialOfferTours(null);
     }
   };
 
   const sourceTours = useMemo(
-    () => (filterType === 'SPECIAL_OFFER' ? (specialOfferTours || []) : tours),
-    [filterType, specialOfferTours, tours],
+    () => filterType === 'FEATURED'
+      ? (featuredTours || [])
+      : filterType === 'SPECIAL_OFFER'
+      ? (specialOfferTours || [])
+      : tours,
+    [filterType, featuredTours, specialOfferTours, tours],
   );
-  const listLoading = loading || (filterType === 'SPECIAL_OFFER' && specialOfferLoading);
+  const listLoading = filterType === 'FEATURED'
+    ? featuredLoading
+    : filterType === 'SPECIAL_OFFER'
+    ? specialOfferLoading
+    : loading;
+  const showFeaturedError = filterType === 'FEATURED' && featuredError !== null;
 
   const filteredTours = useMemo(() => {
     let result = [...sourceTours];
@@ -108,11 +143,7 @@ export const TourListScreen: React.FC<TourListScreenProps> = ({
     }
 
     // Sorting
-    if (sortBy === 'price_asc') {
-      result.sort((a, b) => a.starting_price - b.starting_price);
-    } else if (sortBy === 'price_desc') {
-      result.sort((a, b) => b.starting_price - a.starting_price);
-    } else if (sortBy === 'duration') {
+    if (sortBy === 'duration') {
       result.sort((a, b) => b.duration_days - a.duration_days);
     }
 
@@ -167,26 +198,6 @@ export const TourListScreen: React.FC<TourListScreenProps> = ({
         <Text style={styles.countText}>
           Showing <Text style={styles.countHighlight}>{filteredTours.length}</Text> packages
         </Text>
-        <View style={styles.sortToggleRow}>
-          <Pressable
-            style={[styles.sortChip, sortBy === 'price_asc' && styles.sortChipActive]}
-            onPress={() => setSortBy(sortBy === 'price_asc' ? 'recommended' : 'price_asc')}
-          >
-            <Text style={[styles.sortChipText, sortBy === 'price_asc' && styles.sortChipTextActive]}>Price ↑</Text>
-          </Pressable>
-          <Pressable
-            style={[styles.sortChip, sortBy === 'price_desc' && styles.sortChipActive]}
-            onPress={() => setSortBy(sortBy === 'price_desc' ? 'recommended' : 'price_desc')}
-          >
-            <Text style={[styles.sortChipText, sortBy === 'price_desc' && styles.sortChipTextActive]}>Price ↓</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => setLayoutMode(layoutMode === 'vertical' ? 'horizontal' : 'vertical')}
-            style={styles.layoutToggleBtn}
-          >
-            <Text style={styles.layoutToggleIcon}>{layoutMode === 'vertical' ? '☰' : '☷'}</Text>
-          </Pressable>
-        </View>
       </View>
     </View>
   );
@@ -200,12 +211,16 @@ export const TourListScreen: React.FC<TourListScreenProps> = ({
         ListHeaderComponent={listHeader}
         contentContainerStyle={styles.listContent}
         refreshControl={
-          <RefreshControl refreshing={listLoading} onRefresh={filterType === 'SPECIAL_OFFER' ? loadSpecialOffers : onRefresh} colors={[COLORS.primary]} />
+          <RefreshControl
+            refreshing={listLoading}
+            onRefresh={filterType === 'FEATURED' ? loadFeaturedTours : filterType === 'SPECIAL_OFFER' ? loadSpecialOffers : onRefresh}
+            colors={[COLORS.primary]}
+          />
         }
         renderItem={({ item }) => (
           <TourCard
             tour={item}
-            layout={layoutMode}
+            layout="vertical"
             onPress={() => onSelectTour(item)}
             onEnquire={onEnquireTour ? () => onEnquireTour(item) : () => { onSelectTour(item); onNavigate('enquiry'); }}
             isSaved={savedTours.includes(item.slug)}
@@ -215,19 +230,27 @@ export const TourListScreen: React.FC<TourListScreenProps> = ({
         ListEmptyComponent={listLoading ? <TourListSkeleton /> : (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyIcon}>🔍</Text>
-            <Text style={styles.emptyTitle}>No Matching Tours Found</Text>
+            <Text style={styles.emptyTitle}>
+              {showFeaturedError ? 'Unable to Load Featured Tours' : 'No Matching Tours Found'}
+            </Text>
             <Text style={styles.emptySubtitle}>
-              Try adjusting your search terms or filter selection.
+              {showFeaturedError ? featuredError : 'Try adjusting your search terms or filter selection.'}
             </Text>
             <Pressable
               style={styles.resetBtn}
               onPress={() => {
-                changeFilter('ALL');
-                setSearchQuery('');
-                setSortBy('recommended');
+                if (showFeaturedError) {
+                  loadFeaturedTours();
+                } else {
+                  changeFilter('ALL');
+                  setSearchQuery('');
+                  setSortBy('recommended');
+                }
               }}
             >
-              <Text style={styles.resetBtnText}>Reset All Filters</Text>
+              <Text style={styles.resetBtnText}>
+                {showFeaturedError ? 'Retry' : 'Reset All Filters'}
+              </Text>
             </Pressable>
           </View>
         )}
@@ -319,46 +342,6 @@ const makeStyles = (COLORS: ReturnType<typeof useColors>) => StyleSheet.create({
   countHighlight: {
     fontWeight: '800',
     color: COLORS.primary,
-  },
-  sortToggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  sortChip: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: '#FFFFFF',
-  },
-  sortChipActive: {
-    backgroundColor: COLORS.primarySubtle,
-    borderColor: COLORS.primary,
-  },
-  sortChipText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: COLORS.textSecondary,
-  },
-  sortChipTextActive: {
-    color: COLORS.primary,
-    fontWeight: '800',
-  },
-  layoutToggleBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 4,
-    backgroundColor: COLORS.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  layoutToggleIcon: {
-    fontSize: 14,
-    color: COLORS.text,
   },
   listContent: {
     padding: 16,

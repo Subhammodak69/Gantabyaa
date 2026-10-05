@@ -312,11 +312,13 @@ export const TourDetailScreen: React.FC<TourDetailScreenProps> = ({
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent} refreshControl={<RefreshControl refreshing={loading} onRefresh={loadDetail} colors={[COLORS.primary]} />}>
         {/* Top Hero Image & Actions */}
         <View style={styles.heroWrapper}>
-          <Image
-            source={{ uri: activeSeason.cover_image }}
-            style={styles.heroImage}
-            resizeMode="cover"
-          />
+          {activeSeason.cover_image?.trim() ? (
+            <Image
+              source={{ uri: activeSeason.cover_image.trim() }}
+              style={styles.heroImage}
+              resizeMode="cover"
+            />
+          ) : null}
           {heroVideo && heroVideoPlaying && (
             <View style={styles.heroVideoLayer} pointerEvents="none">
               <Video

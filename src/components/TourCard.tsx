@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Image, Pressable } from 'react-native';
 import Video from 'react-native-video';
-import { COLORS, useColors } from '../theme/theme';
+import { useColors } from '../theme/theme';
 import { TourPackageSummary } from '../types';
 
 interface TourCardProps {
@@ -25,6 +25,7 @@ export const TourCard: React.FC<TourCardProps> = ({
   const styles = makeStyles(COLORS);
   const [previewing, setPreviewing] = useState(false);
   const isDomestic = tour.type === 'DOMESTIC';
+  const coverImage = tour.cover_image?.trim();
   const priceFormatted = tour.starting_price
     ? `₹${Number(tour.starting_price).toLocaleString('en-IN')}`
     : 'Contact Us';
@@ -41,11 +42,13 @@ export const TourCard: React.FC<TourCardProps> = ({
         ]}
       >
         <View style={styles.horizontalImageContainer}>
-          <Image
-            source={{ uri: tour.cover_image }}
-            style={styles.horizontalImage}
-            resizeMode="cover"
-          />
+          {coverImage ? (
+            <Image
+              source={{ uri: coverImage }}
+              style={styles.horizontalImage}
+              resizeMode="cover"
+            />
+          ) : null}
           {previewing && tour.banner_video ? (
             <Video
               source={{ uri: tour.banner_video }}
@@ -116,11 +119,13 @@ export const TourCard: React.FC<TourCardProps> = ({
       style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
     >
       <View style={styles.imageContainer}>
-        <Image
-          source={{ uri: tour.cover_image }}
-          style={styles.image}
-          resizeMode="cover"
-        />
+        {coverImage ? (
+          <Image
+            source={{ uri: coverImage }}
+            style={styles.image}
+            resizeMode="cover"
+          />
+        ) : null}
         {previewing && tour.banner_video && (
           <Video
             source={{ uri: tour.banner_video }}

@@ -125,7 +125,7 @@ function formatSummary(x: any): TourPackageSummary {
     cover_image: x.cover_image || x.banner?.image || '',
     banner_video: x.banner_video || x.banner?.video || '',
     season_name: x.season_name || '',
-    is_featured: Boolean(x.is_featured || x.featured || x.badge),
+    is_featured: Boolean(x.is_featured || x.featured),
     is_active: x.is_active !== false,
     is_wishlist: Boolean(x.is_wishlist),
   };
