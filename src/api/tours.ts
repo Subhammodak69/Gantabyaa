@@ -16,7 +16,7 @@ import {
 export const OFFICIAL_WHATSAPP = '919832000000';
 
 export function getTourWebUrl(slug: string): string {
-  return `${WEB_APP_URL}/journey/${encodeURIComponent(slug)}`;
+  return `${WEB_APP_URL}/${encodeURIComponent(slug)}`;
 }
 
 function textValue(value: any): string {
