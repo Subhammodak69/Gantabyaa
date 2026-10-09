@@ -39,6 +39,7 @@ export const DocumentsScreen: React.FC<Props> = ({onOpenDocument, sharedFile, on
   const uploadControllerRef = useRef<AbortController | null>(null);
   const processedSharedFileRef = useRef<SharedFile | null>(null);
   const insets = useSafeAreaInsets();
+  const documentTypeOptions = ['ID_PROOF', 'ADDRESS_PROOF'];
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -225,7 +226,14 @@ export const DocumentsScreen: React.FC<Props> = ({onOpenDocument, sharedFile, on
               <Text style={styles.inputLabel}>Document name</Text>
               <TextInput value={title} onChangeText={setTitle} placeholder="Document name" placeholderTextColor={colors.textMuted} style={styles.input} />
               <Text style={styles.inputLabel}>Document type</Text>
-              <TextInput value={documentType} onChangeText={setDocumentType} placeholder="Type, e.g. ID_PROOF" placeholderTextColor={colors.textMuted} style={styles.input} autoCapitalize="characters" />
+              <View style={{flexDirection: 'row', gap: 8, marginBottom: 12}}>
+                {documentTypeOptions.map(type => {
+                  const selected = documentType === type;
+                  return <Pressable key={type} onPress={() => setDocumentType(type)} style={{flex: 1, alignItems: 'center', borderRadius: 10, borderWidth: 1, borderColor: selected ? colors.primary : colors.border, backgroundColor: selected ? colors.primarySubtle : colors.surface, paddingHorizontal: 8, paddingVertical: 11}}>
+                    <Text style={{color: selected ? colors.primary : colors.textSecondary, fontSize: 11, fontWeight: '800'}}>{type === 'ID_PROOF' ? 'ID proof' : 'Address proof'}</Text>
+                  </Pressable>;
+                })}
+              </View>
               <Text style={styles.inputLabel}>Description</Text>
               <TextInput value={description} onChangeText={setDescription} placeholder="Description (optional)" placeholderTextColor={colors.textMuted} style={[styles.input, styles.multiline]} multiline />
               <Pressable style={[styles.chooseButton, (!uploadedFileUrl || uploading) && styles.disabledButton]} onPress={saveDocument} disabled={!uploadedFileUrl || uploading}>

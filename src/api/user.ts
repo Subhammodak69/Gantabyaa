@@ -157,6 +157,19 @@ export async function fetchDocuments(page = 1, pageSize = 20): Promise<ApiEnvelo
   return authenticated<ApiEnvelope<TravelDocument[]>>(`/api/v1/documents?page=${page}&page_size=${pageSize}`);
 }
 
+export async function fetchBookingDocuments(
+  bookingId: string,
+  page = 1,
+  pageSize = 100
+): Promise<ApiEnvelope<TravelDocument[]>> {
+  const params = new URLSearchParams({
+    booking_id: bookingId,
+    page: String(page),
+    page_size: String(pageSize),
+  });
+  return authenticated<ApiEnvelope<TravelDocument[]>>(`/api/v1/documents/booking?${params.toString()}`);
+}
+
 export async function createDocumentRecord(
   fileUrl: string,
   fileName: string,

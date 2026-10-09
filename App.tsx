@@ -789,7 +789,7 @@ function AppInner() {
         return selectedInvoice ? <InvoiceDetailsScreen invoice={selectedInvoice} onBack={goBack} /> : <BillsInvoicesScreen onOpenInvoice={openInvoiceDetails} />;
 
       case 'booking_details':
-        return selectedBooking ? <BookingDetailsScreen tour={selectedBooking} onBack={goBack} /> : <MyTripsScreen onOpenBooking={openBookingDetails} />;
+        return selectedBooking ? <BookingDetailsScreen tour={selectedBooking} onBack={goBack} onOpenDocument={openDocumentViewer} /> : <MyTripsScreen onOpenBooking={openBookingDetails} />;
 
       default:
         return (

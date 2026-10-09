@@ -355,11 +355,9 @@ export const AuthScreen: React.FC<Props> = ({ onLoginSuccess }) => {
                         .padStart(2, '0')}`
                     : 'Code expired'}
                 </Text>
-                {expiresIn <= 0 ? (
-                  <Pressable onPress={sendOtp} disabled={loading}>
-                    <Text style={styles.resendText}>Resend Code</Text>
-                  </Pressable>
-                ) : null}
+                <Pressable onPress={sendOtp} disabled={loading} accessibilityRole="button" accessibilityLabel="Resend verification code">
+                  <Text style={[styles.resendText, loading && styles.submitBtnDisabled]}>{loading ? 'Sending...' : 'Resend Code'}</Text>
+                </Pressable>
               </View>
             </View>
           )}
