@@ -2,7 +2,7 @@ import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {ActivityIndicator, Alert, Image, Platform, Pressable, StyleSheet, Text, View} from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import RNBlobUtil from 'react-native-blob-util';
-import {getDocumentDownloadEndpoint, getDocumentDownloadUrl} from '../api/user';
+import {getDocumentDownloadEndpoint} from '../api/user';
 import {getAccessToken} from '../api/client';
 import {TravelDocument} from '../types';
 import {useColors} from '../theme/theme';
@@ -29,8 +29,10 @@ export const DocumentViewerScreen: React.FC<Props> = ({document, onBack}) => {
   const [filePath, setFilePath] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [downloadMimeType, setDownloadMimeType] = useState('');
   const pathRef = useRef<string | null>(null);
-  const mimeType = useMemo(() => getMimeType(document), [document]);
+  const inferredMimeType = useMemo(() => getMimeType(document), [document]);
+  const mimeType = downloadMimeType || inferredMimeType;
   const fileName = document.file_name || document.title || 'document';
   const isImage = mimeType.startsWith('image/');
 
@@ -38,14 +40,8 @@ export const DocumentViewerScreen: React.FC<Props> = ({document, onBack}) => {
     let mounted = true;
     const loadDocument = async () => {
       try {
-        const fileUrl = document.file_url;
-        if (!fileUrl) throw new Error('No document URL was returned.');
-
-        // Do not forward the app bearer token to Cloudinary or any external
-        // storage provider. Relative URLs are served through our protected API.
-        const isExternalUrl = /^https?:\/\//i.test(fileUrl);
-        const token = isExternalUrl ? null : await getAccessToken();
-        if (!isExternalUrl && !token) {
+        const token = await getAccessToken();
+        if (!token) {
           throw new Error('Your session has expired. Please sign in again.');
         }
 
@@ -57,10 +53,23 @@ export const DocumentViewerScreen: React.FC<Props> = ({document, onBack}) => {
           ...(fileName.includes('.') ? {appendExt: fileName.split('.').pop()} : {}),
         }).fetch(
           'GET',
-          isExternalUrl ? getDocumentDownloadUrl(fileUrl) : getDocumentDownloadEndpoint(document.id),
+          getDocumentDownloadEndpoint(document.id),
           requestHeaders,
         );
 
+        const responseInfo = result.info();
+        if (responseInfo.status < 200 || responseInfo.status >= 300) {
+          throw new Error(`Document download failed (${responseInfo.status}).`);
+        }
+        const headerValue = Object.entries(responseInfo.headers || {}).find(
+          ([name]) => name.toLowerCase() === 'content-type',
+        )?.[1];
+        const contentType = typeof headerValue === 'string'
+          ? headerValue.split(';')[0].trim().toLowerCase()
+          : undefined;
+        if (mounted && contentType && contentType !== 'application/octet-stream') {
+          setDownloadMimeType(contentType);
+        }
         pathRef.current = result.path();
         if (mounted) setFilePath(result.path());
       } catch (loadError) {
@@ -75,7 +84,7 @@ export const DocumentViewerScreen: React.FC<Props> = ({document, onBack}) => {
       mounted = false;
       if (pathRef.current) RNBlobUtil.fs.unlink(pathRef.current).catch(() => undefined);
     };
-  }, [document, fileName]);
+  }, [document.id, fileName]);
 
   const openWithDeviceViewer = async () => {
     if (!filePath) return;

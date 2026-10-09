@@ -13,10 +13,11 @@ import {DocumentListSkeleton} from '../components/Skeleton';
 import {OverflowButton, OverflowMenu} from '../components/OverflowMenu';
 import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import {SharedFile} from '../native/shareIntent';
+import {DocumentViewerScreen} from './DocumentViewerScreen';
 
-interface Props { onNavigate: (screen: NavScreen) => void; onOpenDocument?: (document: TravelDocument) => void; sharedFile?: SharedFile | null; onSharedFileConsumed?: () => void; }
+interface Props { onNavigate: (screen: NavScreen) => void; sharedFile?: SharedFile | null; onSharedFileConsumed?: () => void; }
 
-export const DocumentsScreen: React.FC<Props> = ({onOpenDocument, sharedFile, onSharedFileConsumed}) => {
+export const DocumentsScreen: React.FC<Props> = ({sharedFile, onSharedFileConsumed}) => {
   const colors = useColors();
   const styles = makeStyles(colors);
   const {showDialog} = useAppDialog();
@@ -35,6 +36,7 @@ export const DocumentsScreen: React.FC<Props> = ({onOpenDocument, sharedFile, on
   const [previewVisible, setPreviewVisible] = useState(false);
   const [query, setQuery] = useState('');
   const [actionDocument, setActionDocument] = useState<TravelDocument | null>(null);
+  const [previewDocument, setPreviewDocument] = useState<TravelDocument | null>(null);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const uploadControllerRef = useRef<AbortController | null>(null);
   const processedSharedFileRef = useRef<SharedFile | null>(null);
@@ -197,13 +199,16 @@ export const DocumentsScreen: React.FC<Props> = ({onOpenDocument, sharedFile, on
       </View>}
       ListEmptyComponent={loading ? <DocumentListSkeleton /> : <View style={styles.empty}><Ionicons name="document-text-outline" size={34} color={colors.textMuted} /><Text style={styles.emptyTitle}>{query ? 'No matching documents' : `No ${activeTab} documents`}</Text><Text style={styles.emptyText}>{activeTab === 'incoming' ? 'Files shared with you will appear here.' : 'Upload a file to share it with your travel team.'}</Text></View>}
       renderItem={({item: document, index}) => <View style={styles.card}>
-        <Pressable style={styles.cardPressable} onPress={() => onOpenDocument?.(document)}>
+        <Pressable style={styles.cardPressable} onPress={() => setPreviewDocument(document)}>
         <View style={styles.listIndex}><Text style={styles.listIndexText}>{String(index + 1).padStart(2, '0')}</Text></View>
         <View style={styles.cardCopy}><Text style={styles.cardTitle} numberOfLines={1}>{document.title || document.file_name || 'Untitled document'}</Text><Text style={styles.meta}>{document.document_type || 'DOCUMENT'} {document.file_name ? `· ${document.file_name}` : ''}</Text>{document.description ? <Text style={styles.description} numberOfLines={1}>{document.description}</Text> : null}<Text style={styles.date}>{document.uploaded_at ? new Date(document.uploaded_at).toLocaleDateString() : 'Recently uploaded'}</Text></View>
         </Pressable>
         <OverflowButton colors={colors} onPress={() => setActionDocument(document)} />
       </View>}
     />
+    <Modal visible={Boolean(previewDocument)} animationType="slide" onRequestClose={() => setPreviewDocument(null)}>
+      {previewDocument ? <DocumentViewerScreen document={previewDocument} onBack={() => setPreviewDocument(null)} /> : null}
+    </Modal>
     <Modal visible={showForm && activeTab === 'outgoing'} transparent animationType="slide" onRequestClose={resetUploadForm}>
       <KeyboardAvoidingView style={[styles.modalBackdrop, keyboardVisible && styles.modalBackdropKeyboard]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={insets.top}>
         <SafeAreaView edges={keyboardVisible ? ['top'] : ['bottom']} style={[styles.uploadModal, keyboardVisible && styles.uploadModalKeyboard, {paddingBottom: keyboardVisible ? Math.max(8, insets.bottom) : 18}]}>
@@ -254,7 +259,11 @@ export const DocumentsScreen: React.FC<Props> = ({onOpenDocument, sharedFile, on
       </View>
     </Modal>
     <OverflowMenu colors={colors} visible={Boolean(actionDocument)} title={actionDocument?.title || 'Document actions'} onClose={() => setActionDocument(null)} actions={[
-      {label: 'Preview document', icon: 'eye', onPress: () => actionDocument && onOpenDocument?.(actionDocument)},
+      {label: 'Preview document', icon: 'eye', onPress: () => {
+        if (!actionDocument) return;
+        setPreviewDocument(actionDocument);
+        setActionDocument(null);
+      }},
       {label: 'Download document', icon: 'download', onPress: () => actionDocument && openDocument(actionDocument)},
       ...(actionDocument?.can_delete !== false ? [{label: 'Delete document', icon: 'trash-2', destructive: true, onPress: () => actionDocument && removeDocument(actionDocument)}] : []),
     ]} />

@@ -195,6 +195,7 @@ export type NavScreen =
   | 'my_enquiries'
   | 'edit_enquiry'
   | 'enquiry_details'
+  | 'enquiry_quotations'
   | 'bills_invoices'
   | 'invoice_details'
   | 'booking_details'

@@ -45,6 +45,7 @@ import { MyTripsScreen, MyEnquiriesScreen, BillsInvoicesScreen } from './src/scr
 import { InvoiceDetailsScreen } from './src/screens/InvoiceDetailsScreen';
 import { EditEnquiryScreen } from './src/screens/EditEnquiryScreen';
 import { EnquiryDetailsScreen } from './src/screens/EnquiryDetailsScreen';
+import { EnquiryQuotationsScreen } from './src/screens/EnquiryQuotationsScreen';
 import { BookingDetailsScreen } from './src/screens/BookingDetailsScreen';
 import { WalletScreen } from './src/screens/WalletScreen';
 import { PointsScreen } from './src/screens/PointsScreen';
@@ -745,7 +746,7 @@ function AppInner() {
         return <NotificationSettingsScreen isLoggedIn={isLoggedIn} />;
 
       case 'documents':
-        return <DocumentsScreen onNavigate={navigateWithAuth} onOpenDocument={openDocumentViewer} sharedFile={sharedFile} onSharedFileConsumed={clearSharedFile} />;
+        return <DocumentsScreen onNavigate={navigateWithAuth} sharedFile={sharedFile} onSharedFileConsumed={clearSharedFile} />;
 
       case 'document_viewer':
         return selectedDocument ? (
@@ -753,7 +754,7 @@ function AppInner() {
             document={selectedDocument}
             onBack={() => { setSelectedDocument(null); goBack(); }}
           />
-        ) : <DocumentsScreen onNavigate={navigateWithAuth} onOpenDocument={openDocumentViewer} sharedFile={sharedFile} onSharedFileConsumed={clearSharedFile} />;
+        ) : <DocumentsScreen onNavigate={navigateWithAuth} sharedFile={sharedFile} onSharedFileConsumed={clearSharedFile} />;
 
       case 'wishlist':
         return <WishlistScreen tours={tours} savedTours={savedTours} onSelectTour={handleSelectTour} onToggleSave={toggleSaveTour} onRefresh={async () => { await Promise.all([loadTours(), loadWishlist()]); }} />;
@@ -771,7 +772,10 @@ function AppInner() {
         return selectedEnquiry ? <EditEnquiryScreen enquiry={selectedEnquiry} onSaved={() => { setSelectedEnquiry(null); loadEnquiries(); setRootScreen('my_enquiries'); }} /> : <MyEnquiriesScreen enquiries={enquiries} loading={loadingEnquiries} onRefresh={loadEnquiries} onViewEnquiry={openEnquiryDetails} onEditEnquiry={openEnquiryEditor} />;
 
       case 'enquiry_details':
-        return selectedEnquiry ? <EnquiryDetailsScreen enquiry={selectedEnquiry} onBack={goBack} onEdit={() => navigateTo('edit_enquiry')} /> : <MyEnquiriesScreen enquiries={enquiries} loading={loadingEnquiries} onRefresh={loadEnquiries} onViewEnquiry={openEnquiryDetails} onEditEnquiry={openEnquiryEditor} />;
+        return selectedEnquiry ? <EnquiryDetailsScreen enquiry={selectedEnquiry} onBack={goBack} onEdit={() => navigateTo('edit_enquiry')} onViewQuotations={selectedEnquiry.id ? () => navigateTo('enquiry_quotations') : undefined} /> : <MyEnquiriesScreen enquiries={enquiries} loading={loadingEnquiries} onRefresh={loadEnquiries} onViewEnquiry={openEnquiryDetails} onEditEnquiry={openEnquiryEditor} />;
+
+      case 'enquiry_quotations':
+        return selectedEnquiry ? <EnquiryQuotationsScreen enquiry={selectedEnquiry} onBack={goBack} /> : <MyEnquiriesScreen enquiries={enquiries} loading={loadingEnquiries} onRefresh={loadEnquiries} onViewEnquiry={openEnquiryDetails} onEditEnquiry={openEnquiryEditor} />;
 
       case 'bills_invoices':
         return <BillsInvoicesScreen onOpenInvoice={openInvoiceDetails} />;
