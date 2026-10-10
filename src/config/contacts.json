@@ -1,0 +1,28 @@
+{
+  "phones": [
+    {
+      "label": "Travel Helpline",
+      "number": "+919932204885",
+      "display": "+91 99322 04885"
+    }
+  ],
+  "emails": [
+    {
+      "label": "General Enquiries",
+      "address": "info@coochbehartravel.com"
+    }
+  ],
+  "whatsapp": [
+    {
+      "label": "WhatsApp Concierge",
+      "number": "919932204885",
+      "display": "+91 99322 04885"
+    }
+  ],
+  "office": {
+    "name": "Gantabyaa Main Office",
+    "address": "Opposite Cooch Behar Palace, N.N. Road, Cooch Behar, West Bengal 736101, India",
+    "hours": "Monday – Saturday: 9:30 AM – 8:30 PM",
+    "sundayHours": "Sunday: 10:00 AM – 4:00 PM"
+  }
+}

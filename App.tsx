@@ -50,6 +50,7 @@ import { BookingDetailsScreen } from './src/screens/BookingDetailsScreen';
 import { WalletScreen } from './src/screens/WalletScreen';
 import { PointsScreen } from './src/screens/PointsScreen';
 import { RankingScreen } from './src/screens/RankingScreen';
+import { ContactScreen } from './src/screens/ContactScreen';
 import { toastConfig } from './src/components/AppToast';
 import { showApiError } from './src/utils/toast';
 import { decodeReferral } from './src/utils/referral';
@@ -85,7 +86,7 @@ function AppInner() {
   }, []);
 
   const navigateTo = React.useCallback((screen: NavScreen) => {
-    if (!isLoggedInRef.current && screen !== 'auth' && screen !== 'splash') {
+    if (!isLoggedInRef.current && screen !== 'auth' && screen !== 'splash' && screen !== 'contact') {
       setRootScreen('auth');
       return;
     }
@@ -788,6 +789,9 @@ function AppInner() {
 
       case 'ranking':
         return <RankingScreen onBack={goBack} />;
+
+      case 'contact':
+        return <ContactScreen onBack={goBack} />;
 
       case 'invoice_details':
         return selectedInvoice ? <InvoiceDetailsScreen invoice={selectedInvoice} onBack={goBack} /> : <BillsInvoicesScreen onOpenInvoice={openInvoiceDetails} />;

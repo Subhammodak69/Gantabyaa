@@ -202,4 +202,5 @@ export type NavScreen =
   | 'documents'
   | 'document_viewer'
   | 'wishlist'
-  | 'referrals';
+  | 'referrals'
+  | 'contact';

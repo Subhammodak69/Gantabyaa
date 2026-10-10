@@ -226,6 +226,12 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
 
           <Text style={styles.sectionHeader}>INSTANT SUPPORT</Text>
 
+          <Pressable style={styles.menuItem} onPress={() => handleNav('contact')}>
+            <Text style={styles.menuIcon}>☎</Text>
+            <Text style={styles.menuLabel}>Contact Us</Text>
+            <Text style={styles.menuArrow}>›</Text>
+          </Pressable>
+
           <Pressable
             style={[styles.menuItem, styles.whatsappItem]}
             onPress={() => {
