@@ -16,14 +16,12 @@ import {
 import Feather from 'react-native-vector-icons/Feather';
 import {
   fetchDestinations,
-  fetchHotels,
   fetchTourPackageVariants,
   fetchTourPackages,
-  fetchVehicles,
   updateEnquiry,
 } from '../api/tourApi';
 import {AppColors, useColors} from '../theme/theme';
-import {CustomDateField} from '../components/CustomDatePicker';
+import enums from '../utils/enums.json';
 
 interface Props {
   enquiry: any;
@@ -34,6 +32,19 @@ interface LookupOption {
   id: string;
   label: string;
 }
+
+const vehicleTypeOptions: LookupOption[] = [
+  {id: 'ANY', label: 'Any / Not Sure'},
+  ...Object.values(enums.VehicleType || {}).map(value => ({id: String(value), label: String(value)})),
+];
+
+const departureDateLabel = (value: string) => {
+  const [year, month, day] = String(value).slice(0, 10).split('-').map(Number);
+  if (!year || !month || !day) return value;
+  return new Date(year, month - 1, day).toLocaleDateString('en-IN', {
+    day: 'numeric', month: 'short', year: 'numeric',
+  });
+};
 
 type LookupFieldProps = {
   label: string;
@@ -142,8 +153,7 @@ export const EditEnquiryScreen: React.FC<Props> = ({enquiry, onSaved}) => {
     adult_count: String(enquiry?.adult_count ?? enquiry?.adults ?? 1),
     child_count: String(enquiry?.child_count ?? enquiry?.children ?? 0),
     senior_count: String(enquiry?.senior_count ?? 0),
-    hotel_id: enquiry?.hotel_id || enquiry?.hotelId || '',
-    vehicle_id: enquiry?.vehicle_id || enquiry?.vehicleId || '',
+    vehicle_type: enquiry?.vehicle_type || enquiry?.vehicleType || 'ANY',
     room_count: String(enquiry?.room_count ?? enquiry?.no_room ?? 0),
     vehicle_count: String(enquiry?.vehicle_count ?? enquiry?.vehicleCount ?? 0),
     budget_min: String(enquiry?.budget_min ?? enquiry?.budgetMin ?? 0),
@@ -155,8 +165,6 @@ export const EditEnquiryScreen: React.FC<Props> = ({enquiry, onSaved}) => {
   const [packages, setPackages] = useState<any[]>([]);
   const [variants, setVariants] = useState<any[]>([]);
   const [destinations, setDestinations] = useState<any[]>([]);
-  const [hotels, setHotels] = useState<any[]>([]);
-  const [vehicles, setVehicles] = useState<any[]>([]);
   const [saving, setSaving] = useState(false);
   const [lookupsLoading, setLookupsLoading] = useState(true);
 
@@ -165,18 +173,10 @@ export const EditEnquiryScreen: React.FC<Props> = ({enquiry, onSaved}) => {
     Promise.allSettled([
       fetchTourPackages(1, 100),
       fetchDestinations(1, 100),
-      fetchHotels(1, 100),
-      fetchVehicles(1, 100),
-    ]).then(([packageResult, destinationResult, hotelResult, vehicleResult]) => {
+    ]).then(([packageResult, destinationResult]) => {
       if (!active) return;
       if (packageResult.status === 'fulfilled') setPackages(packageResult.value);
       if (destinationResult.status === 'fulfilled') setDestinations(destinationResult.value);
-      if (hotelResult.status === 'fulfilled') {
-        setHotels(Array.isArray(hotelResult.value.data) ? hotelResult.value.data : []);
-      }
-      if (vehicleResult.status === 'fulfilled') {
-        setVehicles(Array.isArray(vehicleResult.value.data) ? vehicleResult.value.data : []);
-      }
       setLookupsLoading(false);
     });
     return () => {
@@ -229,16 +229,18 @@ export const EditEnquiryScreen: React.FC<Props> = ({enquiry, onSaved}) => {
     form.destination_id,
     enquiry?.destination_name || enquiry?.destination || 'Previously selected destination',
   ), [destinations, form.destination_id, enquiry]);
-  const hotelOptions = useMemo(() => withCurrentOption(
-    hotels.map(item => ({id: item.id, label: item.name || 'Hotel'})),
-    form.hotel_id,
-    enquiry?.hotel_name || 'Previously selected hotel',
-  ), [hotels, form.hotel_id, enquiry]);
-  const vehicleOptions = useMemo(() => withCurrentOption(
-    vehicles.map(item => ({id: item.id, label: item.name || 'Vehicle'})),
-    form.vehicle_id,
-    enquiry?.vehicle_name || 'Previously selected vehicle',
-  ), [vehicles, form.vehicle_id, enquiry]);
+  const selectedVariant = variants.find(item => item.id === form.variant_id);
+  const departureDateOptions = useMemo(() => withCurrentOption(
+    (selectedVariant?.dates || []).filter((item: any) => item.date || item.departure_date).map((item: any) => {
+      const value = item.date || item.departure_date || '';
+      return {
+        id: value,
+        label: item.return_date ? `${departureDateLabel(value)} – ${departureDateLabel(item.return_date)}` : departureDateLabel(value),
+      };
+    }),
+    form.travel_date,
+    enquiry?.travel_date || 'Previously selected departure date',
+  ), [selectedVariant, form.travel_date, enquiry]);
 
   const setField = (key: keyof typeof form, value: string) =>
     setForm(current => ({...current, [key]: value}));
@@ -258,8 +260,7 @@ export const EditEnquiryScreen: React.FC<Props> = ({enquiry, onSaved}) => {
         package_id: form.package_id.trim(),
         variant_id: form.variant_id.trim(),
         destination_id: form.destination_id.trim(),
-        hotel_id: form.hotel_id.trim(),
-        vehicle_id: form.vehicle_id.trim(),
+        vehicle_type: form.vehicle_type.trim() || 'ANY',
         meal_plan: form.meal_plan.trim() || 'ANY',
         travel_duration_day: Number(form.travel_duration_day) || 0,
         travel_duration_night: Number(form.travel_duration_night) || 0,
@@ -358,33 +359,24 @@ export const EditEnquiryScreen: React.FC<Props> = ({enquiry, onSaved}) => {
         />
         {fields.slice(3, 8).map(([key, label]) => textField(key, label))}
         <LookupField
-          label="Hotel"
-          value={form.hotel_id}
-          options={hotelOptions}
-          placeholder={lookupsLoading ? 'Loading hotels...' : 'Select hotel'}
+          label="Vehicle type"
+          value={form.vehicle_type}
+          options={vehicleTypeOptions}
+          placeholder="Select vehicle type"
           colors={colors}
           styles={styles}
-          onChange={value => setField('hotel_id', value)}
-        />
-        <LookupField
-          label="Vehicle"
-          value={form.vehicle_id}
-          options={vehicleOptions}
-          placeholder={lookupsLoading ? 'Loading vehicles...' : 'Select vehicle'}
-          colors={colors}
-          styles={styles}
-          onChange={value => setField('vehicle_id', value)}
+          onChange={value => setField('vehicle_type', value)}
         />
         {fields.slice(8).map(([key, label]) => textField(key, label))}
-        <View style={styles.field}>
-          <Text style={styles.label}>Travel date</Text>
-          <CustomDateField
-            value={form.travel_date}
-            onChange={value => setField('travel_date', value)}
-            placeholder="Select travel date"
-            title="Select travel date"
-          />
-        </View>
+        <LookupField
+          label="Travel date"
+          value={form.travel_date}
+          options={departureDateOptions}
+          placeholder={form.package_id ? 'Select departure date' : 'Select a package first'}
+          colors={colors}
+          styles={styles}
+          onChange={value => setField('travel_date', value)}
+        />
         <View style={styles.field}>
           <Text style={styles.label}>Message</Text>
           <TextInput

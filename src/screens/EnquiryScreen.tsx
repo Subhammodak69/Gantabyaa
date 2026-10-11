@@ -18,10 +18,9 @@ import Feather from 'react-native-vector-icons/Feather';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/theme';
 import { useAppDialog } from '../components/AppDialog';
-import { createEnquiry, fetchDestinations, fetchHotels, fetchTourPackageVariants, fetchTourPackages, fetchVehicles, getVisitorId } from '../api/tourApi';
+import { createEnquiry, fetchDestinations, fetchTourPackageVariants, fetchTourPackages, getVisitorId } from '../api/tourApi';
 import enums from '../utils/enums.json';
 import { NavScreen } from '../types';
-import { CustomDateField } from '../components/CustomDatePicker';
 
 interface EnquiryScreenProps {
   onBack: () => void;
@@ -53,6 +52,14 @@ function durationNumber(value: unknown): number | undefined {
     return Array.isArray(items) ? durationNumber(items[0]) : undefined;
   }
   return undefined;
+}
+
+function departureDateLabel(value: string): string {
+  const [year, month, day] = String(value).slice(0, 10).split('-').map(Number);
+  if (!year || !month || !day) return value;
+  return new Date(year, month - 1, day).toLocaleDateString('en-IN', {
+    day: 'numeric', month: 'short', year: 'numeric',
+  });
 }
 
 function SearchableSelect({
@@ -210,10 +217,6 @@ export const EnquiryScreen: React.FC<EnquiryScreenProps> = ({
   const [budgetMin, setBudgetMin] = useState('');
   const [budgetMax, setBudgetMax] = useState('');
   const [vehicleType, setVehicleType] = useState('ANY');
-  const [hotelId, setHotelId] = useState('');
-  const [vehicleId, setVehicleId] = useState('');
-  const [hotels, setHotels] = useState<any[]>([]);
-  const [vehicles, setVehicles] = useState<any[]>([]);
   const [mealPlan, setMealPlan] = useState('ANY');
   const [message, setMessage] = useState('');
   const [specialRequirements, setSpecialRequirements] = useState('');
@@ -231,6 +234,12 @@ export const EnquiryScreen: React.FC<EnquiryScreenProps> = ({
   const resolvedTravelDurationNight = isPackageEnquiry
     ? durationNumber(selectedVariant?.duration_nights) ?? (usesPrefilledVariant ? durationNumber(prefilled?.durationNights) : undefined) ?? durationNumber(selectedPackage?.duration_nights) ?? 0
     : Number(travelDurationNight) || 0;
+  const departureDateOptions = (selectedVariant?.dates || [])
+    .filter((item: any) => item.date || item.departure_date)
+    .map((item: any) => {
+      const value = item.date || item.departure_date || '';
+      return { label: item.return_date ? `${departureDateLabel(value)} – ${departureDateLabel(item.return_date)}` : departureDateLabel(value), value };
+    });
 
   React.useEffect(() => {
     fetchTourPackages(1, 50).then(setPackages).catch(() => setPackages([]));
@@ -257,21 +266,6 @@ export const EnquiryScreen: React.FC<EnquiryScreenProps> = ({
       })
       .catch(() => setVariants([]));
   }, [packageId, packages, selectedPackage, variantId]);
-
-  React.useEffect(() => {
-    if (!destinationId) {
-      setHotels([]);
-      setVehicles([]);
-      return;
-    }
-    Promise.all([fetchHotels(1, 20, destinationId), fetchVehicles(1, 20)]).then(([hotelResponse, vehicleResponse]) => {
-      setHotels(Array.isArray(hotelResponse.data) ? hotelResponse.data : []);
-      setVehicles(Array.isArray(vehicleResponse.data) ? vehicleResponse.data : []);
-    }).catch(() => {
-      setHotels([]);
-      setVehicles([]);
-    });
-  }, [destinationId]);
 
   // Auto-sync logged in user info if available
   React.useEffect(() => {
@@ -302,8 +296,6 @@ export const EnquiryScreen: React.FC<EnquiryScreenProps> = ({
     setBudgetMin('');
     setBudgetMax('');
     setVehicleType('ANY');
-    setHotelId('');
-    setVehicleId('');
     setMealPlan('ANY');
     setMessage('');
     setSpecialRequirements('');
@@ -349,8 +341,7 @@ export const EnquiryScreen: React.FC<EnquiryScreenProps> = ({
         adult_count: Number(adultCount) || 0,
         child_count: Number(childCount) || 0,
         senior_count: Number(seniorCount) || 0,
-        hotel_id: hotelId,
-        vehicle_id: vehicleId,
+        vehicle_type: vehicleType || 'ANY',
         room_count: Number(noRoom) || 0,
         vehicle_count: Number(vehicleCount) || 0,
         budget_min: Number(budgetMin) || 0,
@@ -410,7 +401,7 @@ export const EnquiryScreen: React.FC<EnquiryScreenProps> = ({
           <View style={styles.headerTextContainer}>
             <Text style={styles.pageTitle}>{prefilled?.tourTitle ? 'Send your enquiry' : 'Custom Package Enquiry'}</Text>
             <Text style={styles.pageSubtitle}>
-              {prefilled?.tourTitle ? `Request a quote for ${prefilled.tourTitle}` : 'Tailor-make your holiday with hotels, cabs, meals & custom itinerary'}
+              {prefilled?.tourTitle ? `Request a quote for ${prefilled.tourTitle}` : 'Tailor-make your holiday with vehicles, meals & custom itinerary'}
             </Text>
           </View>
         </View>
@@ -505,7 +496,10 @@ export const EnquiryScreen: React.FC<EnquiryScreenProps> = ({
           <SearchableSelect
             options={variants.map(item => ({label: item.name || item.season_name || 'Tour variant', value: item.id}))}
             value={variantId}
-            onChange={setVariantId}
+            onChange={value => {
+              setVariantId(value);
+              setTravelDate('');
+            }}
             placeholder="Search and select a tour variant"
             styles={styles}
             colors={COLORS}
@@ -532,11 +526,14 @@ export const EnquiryScreen: React.FC<EnquiryScreenProps> = ({
 
         {/* Travel Date & Duration */}
         <Text style={styles.label}>TRAVEL DATE</Text>
-        <CustomDateField
+        <SearchableSelect
+          options={departureDateOptions.length ? departureDateOptions : [{ label: 'Choose a package variant first', value: '' }]}
           value={travelDate}
           onChange={setTravelDate}
-          placeholder="Select travel date"
-          title="Select travel date"
+          placeholder="Select departure date"
+          styles={styles}
+          colors={COLORS}
+          isDark={isDark}
         />
         <View style={styles.row}>
           <View style={styles.col}>
@@ -635,31 +632,6 @@ export const EnquiryScreen: React.FC<EnquiryScreenProps> = ({
           value={vehicleType}
           onChange={setVehicleType}
           placeholder="Search and select a vehicle type"
-          styles={styles}
-          colors={COLORS}
-          isDark={isDark}
-        />
-
-        <Text style={styles.label}>PREFERRED HOTEL</Text>
-        <SearchableSelect
-          options={[{ label: 'Any / Not Sure', value: '' }, ...hotels.map(hotel => ({ label: hotel.name, value: hotel.id }))]}
-          value={hotelId}
-          onChange={setHotelId}
-          placeholder="Search and select a hotel"
-          styles={styles}
-          colors={COLORS}
-          isDark={isDark}
-        />
-
-        <Text style={styles.label}>PREFERRED VEHICLE</Text>
-        <SearchableSelect
-          options={[{ label: 'Any / Not Sure', value: '' }, ...vehicles.map(vehicle => ({ label: `${vehicle.name}${vehicle.capacity ? ` · ${vehicle.capacity} seats` : ''}`, value: vehicle.id }))]}
-          value={vehicleId}
-          onChange={value => {
-            setVehicleId(value);
-            if (value && Number(vehicleCount) === 0) setVehicleCount('1');
-          }}
-          placeholder="Search and select a vehicle"
           styles={styles}
           colors={COLORS}
           isDark={isDark}

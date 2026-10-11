@@ -11,16 +11,13 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { COLORS, useColors } from '../theme/theme';
+import { useColors } from '../theme/theme';
 import { useAppDialog } from './AppDialog';
-import { CustomDateField } from './CustomDatePicker';
 import {
   BASE_API,
   getVisitorId,
   getAccessToken,
   fetchTourPackageVariants,
-  fetchHotels,
-  fetchVehicles,
   fetchMe,
   AuthUser,
 } from '../api/tourApi';
@@ -29,18 +26,18 @@ import enums from '../utils/enums.json';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const isValidUUID = (val?: string) => typeof val === 'string' && UUID_REGEX.test(val.trim());
+const vehicleTypeOptions = [
+  { label: 'Any / Not Sure', value: 'ANY' },
+  ...Object.values(enums.VehicleType || {}).map(value => ({ label: String(value), value: String(value) })),
+];
 
-// Build channel options from enums.json (EnquiryChannel or fallback)
-const channelOptions: string[] = Object.values(
-  (enums as any).EnquiryChannel || {
-    WEBSITE: 'WEBSITE',
-    WHATSAPP: 'WHATSAPP',
-    PHONE: 'PHONE',
-    EMAIL: 'EMAIL',
-    OFFLINE: 'OFFLINE',
-    ADMIN: 'ADMIN',
-  }
-);
+const departureDateLabel = (value: string) => {
+  const [year, month, day] = String(value).slice(0, 10).split('-').map(Number);
+  if (!year || !month || !day) return value;
+  return new Date(year, month - 1, day).toLocaleDateString('en-IN', {
+    day: 'numeric', month: 'short', year: 'numeric',
+  });
+};
 
 function ChipSelector({
   options,
@@ -114,7 +111,7 @@ export const EnquiryModal: React.FC<EnquiryModalProps> = ({
   const [mobile, setMobile] = useState('');
   const [email, setEmail] = useState('');
   const [selectedTravelDate, setSelectedTravelDate] = useState(travelDate);
-  const [channel, setChannel] = useState('WEBSITE');
+  const [vehicleType, setVehicleType] = useState('ANY');
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const [customerId, setCustomerId] = useState('');
@@ -122,13 +119,18 @@ export const EnquiryModal: React.FC<EnquiryModalProps> = ({
   // Variants loaded from /api/v1/tour-packages/{tour_slug}/variants
   const [variants, setVariants] = useState<any[]>([]);
   const [selectedVariantId, setSelectedVariantId] = useState<string>('');
-  const [hotelId, setHotelId] = useState('');
-  const [vehicleId, setVehicleId] = useState('');
-  const [hotels, setHotels] = useState<any[]>([]);
-  const [vehicles, setVehicles] = useState<any[]>([]);
-  const [facilitiesLoading, setFacilitiesLoading] = useState(false);
   const [loadingSelect, setLoadingSelect] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const selectedVariant = variants.find(item => item.id === selectedVariantId);
+  const departureDateOptions = (selectedVariant?.dates || [])
+    .filter((item: any) => item.date || item.departure_date)
+    .map((item: any) => {
+      const value = item.date || item.departure_date || '';
+      return {
+        label: item.return_date ? `${departureDateLabel(value)} – ${departureDateLabel(item.return_date)}` : departureDateLabel(value),
+        value,
+      };
+    });
 
   useEffect(() => {
     if (!visible) return;
@@ -185,24 +187,6 @@ export const EnquiryModal: React.FC<EnquiryModalProps> = ({
       setVariants([]);
     }
 
-    const selectedDestinationId = destinationId || (tour as any)?.destination_id || '';
-    if (selectedDestinationId) {
-      setFacilitiesLoading(true);
-      Promise.all([fetchHotels(1, 20, selectedDestinationId), fetchVehicles(1, 20)])
-        .then(([hotelResponse, vehicleResponse]) => {
-          setHotels(Array.isArray(hotelResponse.data) ? hotelResponse.data : []);
-          setVehicles(Array.isArray(vehicleResponse.data) ? vehicleResponse.data : []);
-        })
-        .catch(() => {
-          setHotels([]);
-          setVehicles([]);
-        })
-        .finally(() => setFacilitiesLoading(false));
-    } else {
-      setHotels([]);
-      setVehicles([]);
-    }
-
     // 3. Pre-fill subject
     if (tour) {
       setSubject(`Enquiry about ${tour.title}`);
@@ -216,15 +200,11 @@ export const EnquiryModal: React.FC<EnquiryModalProps> = ({
     setMobile('');
     setEmail('');
     setSelectedTravelDate('');
-    setChannel('WEBSITE');
+    setVehicleType('ANY');
     setSubject('');
     setMessage('');
     setVariants([]);
     setSelectedVariantId('');
-    setHotelId('');
-    setVehicleId('');
-    setHotels([]);
-    setVehicles([]);
     setCustomerId('');
   };
 
@@ -270,10 +250,9 @@ export const EnquiryModal: React.FC<EnquiryModalProps> = ({
         adult_count: 1,
         child_count: 0,
         senior_count: 0,
-        hotel_id: hotelId,
-        vehicle_id: vehicleId,
+        vehicle_type: vehicleType,
         room_count: 0,
-        vehicle_count: vehicleId ? 1 : 0,
+        vehicle_count: vehicleType !== 'ANY' ? 1 : 0,
         budget_min: 0,
         budget_max: 0,
         special_requirements: '',
@@ -374,7 +353,10 @@ export const EnquiryModal: React.FC<EnquiryModalProps> = ({
                     return (
                       <Pressable
                         key={v.id}
-                        onPress={() => setSelectedVariantId(v.id)}
+                        onPress={() => {
+                          setSelectedVariantId(v.id);
+                          setSelectedTravelDate('');
+                        }}
                         style={[styles.chip, isSelected && styles.chipActive]}
                       >
                         <Text style={[styles.chipText, isSelected && styles.chipTextActive]}>
@@ -392,21 +374,13 @@ export const EnquiryModal: React.FC<EnquiryModalProps> = ({
               </View>
             ) : null}
 
-            {/* Destination-specific hotel and vehicle choices */}
+            {/* Vehicle preference */}
             <View style={styles.sectionBlock}>
-              <Text style={styles.label}>PREFERRED HOTEL</Text>
+              <Text style={styles.label}>VEHICLE TYPE</Text>
               <ChipSelector
-                options={[{ label: 'Any / Not Sure', value: '' }, ...hotels.map(hotel => ({ label: `${hotel.name}${hotel.category ? ` · ${hotel.category}` : ''}`, value: hotel.id }))]}
-                value={hotelId}
-                onChange={setHotelId}
-                styles={styles}
-              />
-              {facilitiesLoading ? <ActivityIndicator size="small" color={COLORS.primary} /> : null}
-              <Text style={styles.label}>PREFERRED VEHICLE</Text>
-              <ChipSelector
-                options={[{ label: 'Any / Not Sure', value: '' }, ...vehicles.map(vehicle => ({ label: `${vehicle.name}${vehicle.capacity ? ` · ${vehicle.capacity} seats` : ''}`, value: vehicle.id }))]}
-                value={vehicleId}
-                onChange={setVehicleId}
+                options={vehicleTypeOptions}
+                value={vehicleType}
+                onChange={setVehicleType}
                 styles={styles}
               />
             </View>
@@ -452,13 +426,17 @@ export const EnquiryModal: React.FC<EnquiryModalProps> = ({
               returnKeyType="next"
             />
 
-            <Text style={styles.label}>TRAVEL DATE</Text>
-            <CustomDateField
-              value={selectedTravelDate}
-              onChange={setSelectedTravelDate}
-              placeholder="Select travel date"
-              title="Select travel date"
-            />
+            <Text style={styles.label}>DEPARTURE DATE</Text>
+            {departureDateOptions.length > 0 ? (
+              <ChipSelector
+                options={departureDateOptions}
+                value={selectedTravelDate}
+                onChange={setSelectedTravelDate}
+                styles={styles}
+              />
+            ) : (
+              <Text style={styles.loadingVariantsText}>Select a tour variant to see departure dates.</Text>
+            )}
 
             {/* Message */}
             <Text style={styles.label}>MESSAGE / REQUIREMENTS</Text>

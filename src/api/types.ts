@@ -154,6 +154,7 @@ export interface EnquiryRecord {
   hotel_name?: string;
   room_id?: string;
   vehicle_id?: string;
+  vehicle_type?: string;
   vehicle_name?: string;
   vehicle_registration_number?: string;
   destination?: string;
@@ -169,7 +170,6 @@ export interface EnquiryRecord {
   room_count?: number;
   vehicle_count?: number;
   no_room?: number;
-  vehicle_type?: string;
   meal_plan?: string;
   budget_min?: number;
   budget_max?: number;
@@ -199,6 +199,7 @@ export interface EnquiryCreateInput {
   senior_count?: number;
   hotel_id?: string;
   vehicle_id?: string;
+  vehicle_type?: string;
   room_count?: number;
   vehicle_count?: number;
   budget_min?: number;
