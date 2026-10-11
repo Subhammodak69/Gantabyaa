@@ -41,6 +41,17 @@ function listValue(value: any): any[] {
   return Array.isArray(value?.items) ? value.items : [];
 }
 
+function unwrapVariantDetail(payload: any): any {
+  const data = payload?.data ?? payload ?? {};
+  return data?.variant || data?.details || data?.tour_detail || data?.tour_details || data;
+}
+
+function durationValue(value: unknown, source: unknown, suffix: string): number {
+  if (value != null && value !== '' && Number.isFinite(Number(value))) return Number(value);
+  const match = String(source || '').match(new RegExp(`(\\d+)\\s*${suffix}\\b`, 'i'));
+  return match ? Number(match[1]) : 0;
+}
+
 function regulationValue(value: unknown): string[] | string | null {
   if (value == null) return null;
   if (Array.isArray(value)) return value.map(textValue).filter(Boolean);
@@ -54,6 +65,8 @@ function formatVariant(v: any, i = 0): SeasonVariant {
   const realId = v.variant_id || v.id;
   const variantSlug = v.slug || v.variant_slug || '';
   const price = v.selling_price ?? v.price ?? v.starting_price ?? v.list_price ?? 0;
+  const durationDays = durationValue(v.duration_days, v.duration, 'D');
+  const durationNights = durationValue(v.duration_nights, v.duration, 'N');
   return {
     id: realId || `variant-${i}`,
     key: variantSlug,
@@ -67,9 +80,9 @@ function formatVariant(v: any, i = 0): SeasonVariant {
     banner_video: v.banner?.video || '',
     valid_from: v.valid_from || '',
     valid_to: v.valid_to || '',
-    duration: `${textValue(v.duration_nights) || 0}N | ${textValue(v.duration_days) || 0}D`,
-    duration_days: Number(v.duration_days || 0),
-    duration_nights: Number(v.duration_nights || 0),
+    duration: v.duration || `${durationNights}N | ${durationDays}D`,
+    duration_days: durationDays,
+    duration_nights: durationNights,
     price: Number(price || 0),
     currency: 'INR',
     starting_price: Number(price || 0),
@@ -233,7 +246,7 @@ export async function fetchTourPackageVariants(
     `/api/v1/tour-packages/${encodeURIComponent(tourSlug)}/variants?page=${page}&page_size=${pageSize}`
   );
   return {
-    variants: (Array.isArray(r.data) ? r.data : []).map(formatVariant),
+    variants: listValue(r.data).map(formatVariant),
     pagination: (r as any).pagination,
   };
 }
@@ -258,13 +271,27 @@ export async function fetchTourDetail(
   const packageSlug = d.slug || d.tour_slug || d.package_slug || slug;
   const embeddedVariants = [d.default_variant, ...(d.other_variants || [])].filter(Boolean);
   let seasons = embeddedVariants.map(formatVariant);
+  if (!seasons.length || Number(d.variant_count || 0) > seasons.length) {
+    const listedVariants = await fetchTourPackageVariants(packageSlug, 1, 100).catch(() => null);
+    if (listedVariants?.variants?.length) seasons = listedVariants.variants;
+  }
   const defaultVariant = embeddedVariants.find(v => v.is_default) || embeddedVariants[0];
-  const defaultVariantSlug = defaultVariant?.slug || defaultVariant?.variant_slug;
-  if (defaultVariantSlug) {
-    const detailedDefault = await fetchTourVariant(packageSlug, defaultVariantSlug, embeddedVariants).catch(() => null);
+  const defaultSeason = seasons.find(v => v.is_default) || seasons[0];
+  const defaultVariantKey = defaultVariant?.slug || defaultVariant?.variant_slug
+    || defaultSeason?.key || defaultSeason?.id;
+  if (defaultVariantKey) {
+    const detailedDefault = await fetchTourVariant(packageSlug, defaultVariantKey, seasons).catch(() => null);
     if (detailedDefault?.variant) {
       const responseVariants = listValue(detailedDefault.other_variants).map(formatVariant);
-      seasons = [detailedDefault.variant, ...responseVariants.filter(v => v.key !== detailedDefault.variant.key)];
+      if (responseVariants.length > 0) {
+        seasons = [detailedDefault.variant, ...responseVariants.filter(v => v.key !== detailedDefault.variant.key)];
+      } else {
+        seasons = seasons.map(item => (
+          item.id === detailedDefault.variant.id || item.key === detailedDefault.variant.key
+            ? detailedDefault.variant
+            : item
+        ));
+      }
     }
   }
   return {
@@ -294,19 +321,21 @@ export async function fetchTourDetail(
 export async function fetchTourVariant(slug: string, variantSlug: string, listedVariants?: SeasonVariant[]) {
   const variants = listedVariants ? { variants: listedVariants } : { variants: [] as SeasonVariant[] };
   const listedVariant = variants.variants.find(v => v.id === variantSlug || v.key === variantSlug);
-  const resolvedVariantSlug = listedVariant?.key || (variantSlug && !UUID_PATTERN.test(variantSlug) ? variantSlug : '');
-  if (!slug || UUID_PATTERN.test(slug) || !resolvedVariantSlug || UUID_PATTERN.test(resolvedVariantSlug)) {
+  const resolvedVariantSlug = listedVariant?.key || variantSlug || '';
+  if (!slug || UUID_PATTERN.test(slug) || !resolvedVariantSlug) {
     throw new Error('Tour and variant slugs are required to load tour details');
   }
   const r = await request<ApiEnvelope<any>>(
     `/api/v1/tour-packages/${encodeURIComponent(slug)}/variants/${encodeURIComponent(resolvedVariantSlug)}/details`
   );
-  const detail = r.data?.variant || r.data;
+  const detail = unwrapVariantDetail(r);
   if (!detail) throw new Error('Tour variant was not found');
   return {
     variant: formatVariant({ ...listedVariant, ...detail }),
     details: detail,
-    other_variants: r.data?.other_variants || variants.variants.filter(v => v.id !== listedVariant?.id),
+    other_variants: listValue(r.data?.other_variants || detail?.other_variants).length > 0
+      ? listValue(r.data?.other_variants || detail?.other_variants)
+      : variants.variants.filter(v => v.id !== listedVariant?.id),
   };
 }
 

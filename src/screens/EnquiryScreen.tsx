@@ -18,7 +18,7 @@ import Feather from 'react-native-vector-icons/Feather';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/theme';
 import { useAppDialog } from '../components/AppDialog';
-import { createEnquiry, fetchDestinations, fetchTourPackageVariants, fetchTourPackages, getVisitorId } from '../api/tourApi';
+import { fetchDestinations, fetchTourPackageVariants, fetchTourPackages, openWhatsAppChat } from '../api/tourApi';
 import enums from '../utils/enums.json';
 import { NavScreen } from '../types';
 
@@ -322,36 +322,31 @@ export const EnquiryScreen: React.FC<EnquiryScreenProps> = ({
 
     setIsSubmitting(true);
     try {
-      const visitor_id = await getVisitorId();
-      const payload = {
-        enquiry_type: enquiryType,
-        channel: 'APP',
-        visitor_id,
-        customer_id: initialUser?.id || '',
-        package_id: packageId,
-        variant_id: variantId.trim(),
-        destination_id: destinationId,
-        message: message.trim(),
-        name: name.trim(),
-        phone: mobile.trim(),
-        email: email.trim(),
-        travel_date: travelDate.trim(),
-        travel_duration_day: resolvedTravelDurationDay,
-        travel_duration_night: resolvedTravelDurationNight,
-        adult_count: Number(adultCount) || 0,
-        child_count: Number(childCount) || 0,
-        senior_count: Number(seniorCount) || 0,
-        vehicle_type: vehicleType || 'ANY',
-        room_count: Number(noRoom) || 0,
-        vehicle_count: Number(vehicleCount) || 0,
-        budget_min: Number(budgetMin) || 0,
-        budget_max: Number(budgetMax) || 0,
-        special_requirements: specialRequirements.trim(),
-        meal_plan: mealPlan || 'ANY',
-      };
-
-      const result = await createEnquiry(payload);
-      if (onEnquirySubmitted) onEnquirySubmitted(result);
+      const whatsappMessage = [
+        'Hello Gantabyaa team! 👋',
+        '',
+        'I would like to plan a custom tour:',
+        `Enquiry type: ${enquiryType || 'CUSTOM_TOUR'}`,
+        `Name: ${name.trim()}`,
+        `Mobile / WhatsApp: ${mobile.trim()}`,
+        `Email: ${email.trim() || 'Not provided'}`,
+        `Destination: ${destination.trim() || prefilled?.destinationName || 'Not specified'}`,
+        `Package: ${selectedPackage?.title || prefilled?.tourTitle || 'Custom package'}`,
+        `Variant: ${selectedVariant?.name || selectedVariant?.season_name || 'Not selected'}`,
+        `Departure date: ${travelDate.trim() || 'Not selected'}`,
+        `Duration: ${resolvedTravelDurationDay} days / ${resolvedTravelDurationNight} nights`,
+        `Travellers: Adults ${adultCount || 0}, Children ${childCount || 0}, Seniors ${seniorCount || 0}`,
+        `Rooms: ${noRoom || 0}`,
+        `Vehicle type: ${vehicleType || 'ANY'}`,
+        `Vehicles: ${vehicleCount || 0}`,
+        `Budget: ${budgetMin || 0} - ${budgetMax || 0}`,
+        `Meal plan: ${mealPlan || 'ANY'}`,
+        `Special requirements: ${specialRequirements.trim() || 'None'}`,
+        `Message / preferences: ${message.trim() || 'None'}`,
+        '',
+        'Please help me with availability, pricing and a personalized itinerary.',
+      ].join('\n');
+      if (onEnquirySubmitted) onEnquirySubmitted({ channel: 'WHATSAPP', message: whatsappMessage });
 
       await showDialog({
         title: 'Enquiry Received! 🌟',
@@ -360,6 +355,7 @@ export const EnquiryScreen: React.FC<EnquiryScreenProps> = ({
         confirmText: 'Great!',
       });
       resetForm();
+      openWhatsAppChat(whatsappMessage);
     } catch (error: any) {
       await showDialog({
         title: 'Submission Failed',

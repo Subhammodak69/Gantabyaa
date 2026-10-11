@@ -14,12 +14,12 @@ import {
 import { useColors } from '../theme/theme';
 import { useAppDialog } from './AppDialog';
 import {
-  BASE_API,
-  getVisitorId,
   getAccessToken,
   fetchTourPackageVariants,
+  fetchTourVariant,
   fetchMe,
   AuthUser,
+  openWhatsAppChat,
 } from '../api/tourApi';
 import { TourPackageSummary } from '../types';
 import enums from '../utils/enums.json';
@@ -73,25 +73,8 @@ interface EnquiryModalProps {
   variantId?: string;
   destinationId?: string;
   travelDate?: string;
+  departureDates?: any[];
   user?: AuthUser | null;
-}
-
-async function submitFixedEnquiry(payload: Record<string, any>): Promise<{ success: boolean; message: string }> {
-  const token = await getAccessToken();
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    Accept: 'application/json',
-  };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-
-  const res = await fetch(`${BASE_API}/api/v1/enquiries`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(payload),
-  });
-  const body = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(body?.message || `Request failed (${res.status})`);
-  return body;
 }
 
 export const EnquiryModal: React.FC<EnquiryModalProps> = ({
@@ -100,8 +83,8 @@ export const EnquiryModal: React.FC<EnquiryModalProps> = ({
   tour,
   packageId,
   variantId,
-  destinationId = '',
   travelDate = '',
+  departureDates = [],
   user: initialUser,
 }) => {
   const COLORS = useColors();
@@ -114,14 +97,14 @@ export const EnquiryModal: React.FC<EnquiryModalProps> = ({
   const [vehicleType, setVehicleType] = useState('ANY');
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
-  const [customerId, setCustomerId] = useState('');
 
   // Variants loaded from /api/v1/tour-packages/{tour_slug}/variants
   const [variants, setVariants] = useState<any[]>([]);
   const [selectedVariantId, setSelectedVariantId] = useState<string>('');
   const [loadingSelect, setLoadingSelect] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const selectedVariant = variants.find(item => item.id === selectedVariantId);
+  const selectedVariant = variants.find(item => item.id === selectedVariantId)
+    || (selectedVariantId ? { id: selectedVariantId, dates: departureDates } : undefined);
   const departureDateOptions = (selectedVariant?.dates || [])
     .filter((item: any) => item.date || item.departure_date)
     .map((item: any) => {
@@ -136,9 +119,8 @@ export const EnquiryModal: React.FC<EnquiryModalProps> = ({
     if (!visible) return;
     setSelectedTravelDate(travelDate || '');
 
-    // 1. Pre-fill user profile info and customer_id from /api/v1/auth/me
+    // 1. Pre-fill user profile information when available.
     (async () => {
-      let currentCustomer = initialUser?.id || '';
       if (initialUser) {
         setName(initialUser.name || '');
         setMobile(initialUser.mobile || '');
@@ -149,7 +131,6 @@ export const EnquiryModal: React.FC<EnquiryModalProps> = ({
           if (token) {
             const meRes = await fetchMe();
             if (meRes.data) {
-              if (meRes.data.id) currentCustomer = meRes.data.id;
               setName(prev => prev || meRes.data?.name || '');
               setMobile(prev => prev || meRes.data?.mobile || '');
               setEmail(prev => prev || meRes.data?.email || '');
@@ -159,7 +140,6 @@ export const EnquiryModal: React.FC<EnquiryModalProps> = ({
           // guest user
         }
       }
-      setCustomerId(currentCustomer);
     })();
 
     // 2. Fetch package variants using the public slug-based endpoint.
@@ -168,13 +148,18 @@ export const EnquiryModal: React.FC<EnquiryModalProps> = ({
       setLoadingSelect(true);
       fetchTourPackageVariants(tourSlug)
         .then(result => {
-          setVariants(result.variants);
+          const loadedVariants = result.variants.map(item => (
+            item.id === variantId && departureDates.length > 0
+              ? { ...item, dates: departureDates }
+              : item
+          ));
+          setVariants(loadedVariants);
           // Pre-select variant
-          if (variantId && result.variants.some(v => v.id === variantId || v.name === variantId || v.key === variantId)) {
-            const match = result.variants.find(v => v.id === variantId || v.name === variantId || v.key === variantId);
+          if (variantId && loadedVariants.some(v => v.id === variantId || v.name === variantId || v.key === variantId)) {
+            const match = loadedVariants.find(v => v.id === variantId || v.name === variantId || v.key === variantId);
             if (match) setSelectedVariantId(match.id);
-          } else if (result.variants.length > 0) {
-            setSelectedVariantId(result.variants[0].id);
+          } else if (loadedVariants.length > 0) {
+            setSelectedVariantId(loadedVariants[0].id);
           }
         })
         .catch(() => {
@@ -193,7 +178,7 @@ export const EnquiryModal: React.FC<EnquiryModalProps> = ({
     } else {
       setSubject('');
     }
-  }, [visible, tour, packageId, variantId, initialUser, travelDate]);
+  }, [visible, tour, packageId, variantId, initialUser, travelDate, departureDates]);
 
   const resetForm = () => {
     setName('');
@@ -205,12 +190,25 @@ export const EnquiryModal: React.FC<EnquiryModalProps> = ({
     setMessage('');
     setVariants([]);
     setSelectedVariantId('');
-    setCustomerId('');
   };
 
   const handleClose = () => {
     resetForm();
     onClose();
+  };
+
+  const handleVariantChange = async (variant: any) => {
+    setSelectedVariantId(variant.id);
+    setSelectedTravelDate('');
+    const lookupKey = tour?.slug || (packageId && !isValidUUID(packageId) ? packageId : '');
+    if (!lookupKey || variant.dates?.length) return;
+
+    try {
+      const result = await fetchTourVariant(lookupKey, variant.key || variant.id, variants);
+      setVariants(current => current.map(item => item.id === variant.id || item.id === result.variant.id ? result.variant : item));
+    } catch {
+      // Keep the selected variant available if its details request fails.
+    }
   };
 
   const handleSubmit = async () => {
@@ -225,45 +223,11 @@ export const EnquiryModal: React.FC<EnquiryModalProps> = ({
 
     setIsSubmitting(true);
     try {
-      const visitor_id = await getVisitorId();
-
-      // Resolve package UUID (from /select/{slug} or tour?.id or packageId)
-      const rawPkg = (isValidUUID(tour?.id) ? tour?.id : '') || (isValidUUID(packageId) ? packageId : '');
-      const rawVar = selectedVariantId || (isValidUUID(variantId) ? variantId : '');
-
-      // Use the current fixed-tour enquiry contract.
-      const payload = {
-        enquiry_type: 'FIXED_TOUR',
-        visitor_id: visitor_id || '',
-        customer_id: customerId || '',
-        package_id: rawPkg || '',
-        variant_id: rawVar || '',
-        destination_id: destinationId || (tour as any)?.destination_id || '',
-        channel: 'APP',
-        message: [subject, message].filter(Boolean).join('\n\n').trim(),
-        name: name.trim(),
-        phone: mobile.trim(),
-        email: email.trim(),
-        travel_date: selectedTravelDate || travelDate || '',
-        travel_duration_day: 0,
-        travel_duration_night: 0,
-        adult_count: 1,
-        child_count: 0,
-        senior_count: 0,
-        vehicle_type: vehicleType,
-        room_count: 0,
-        vehicle_count: vehicleType !== 'ANY' ? 1 : 0,
-        budget_min: 0,
-        budget_max: 0,
-        special_requirements: '',
-        meal_plan: 'ANY',
-      };
-
       const confirmed = await showDialog({
         title: 'Confirm enquiry',
-        message: `Send enquiry for ${tour?.title || 'this tour'}?`,
+        message: `Open WhatsApp with your enquiry for ${tour?.title || 'this tour'}?`,
         variant: 'info',
-        confirmText: 'Send enquiry',
+        confirmText: 'Open WhatsApp',
         cancelText: 'Edit',
       });
       if (!confirmed) {
@@ -271,14 +235,36 @@ export const EnquiryModal: React.FC<EnquiryModalProps> = ({
         return;
       }
 
-      await submitFixedEnquiry(payload);
+      const chosenVariant = variants.find(item => item.id === selectedVariantId);
+      const selectedVariantName = chosenVariant?.name || chosenVariant?.season_name || 'Selected package option';
+      const imageUrl = chosenVariant?.cover_image || chosenVariant?.banner?.image || tour?.cover_image || '';
+      const whatsappMessage = [
+        'Hello Gantabyaa team! 👋',
+        '',
+        'I would like to customise this tour package:',
+        `Package: ${tour?.title || 'Tour package'}`,
+        `Destination: ${tour?.destination || 'Not specified'}`,
+        `Variant: ${selectedVariantName}`,
+        `Departure date: ${selectedTravelDate || travelDate || 'Not selected'}`,
+        `Full name: ${name.trim()}`,
+        `Mobile / WhatsApp: ${mobile.trim()}`,
+        `Email: ${email.trim() || 'Not provided'}`,
+        `Vehicle type: ${vehicleType || 'ANY'}`,
+        `Subject: ${subject.trim() || 'Not provided'}`,
+        `Message / requirements: ${message.trim() || 'None'}`,
+        imageUrl ? `Package banner: ${imageUrl}` : '',
+        '',
+        'Please share availability, pricing and booking details.',
+      ].filter(Boolean).join('\n');
+
       await showDialog({
-        title: 'Enquiry Sent! 🎉',
-        message: `Thank you, ${name}! Our travel expert will contact you shortly on ${mobile}.`,
+        title: 'Enquiry Ready in WhatsApp! 🎉',
+        message: 'Your enquiry details are prepared in WhatsApp. Please press Send to share them with our travel team.',
         variant: 'success',
-        confirmText: 'Great, Thanks!',
+        confirmText: 'Done',
       });
       handleClose();
+      openWhatsAppChat(whatsappMessage);
     } catch (error: any) {
       await showDialog({
         title: 'Could not send enquiry',
@@ -354,8 +340,7 @@ export const EnquiryModal: React.FC<EnquiryModalProps> = ({
                       <Pressable
                         key={v.id}
                         onPress={() => {
-                          setSelectedVariantId(v.id);
-                          setSelectedTravelDate('');
+                          handleVariantChange(v);
                         }}
                         style={[styles.chip, isSelected && styles.chipActive]}
                       >

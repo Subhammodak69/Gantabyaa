@@ -14,7 +14,7 @@ import {
 import { COLORS, useColors } from '../theme/theme';
 import { useAppDialog } from './AppDialog';
 import { CustomDateField } from './CustomDatePicker';
-import { createEnquiry, fetchHotels, fetchTourPackages, fetchVehicles, getVisitorId } from '../api/tourApi';
+import { fetchHotels, fetchTourPackages, fetchVehicles, openWhatsAppChat } from '../api/tourApi';
 import enums from '../utils/enums.json';
 
 interface CustomTourModalProps {
@@ -100,6 +100,9 @@ export const CustomTourModal: React.FC<CustomTourModalProps> = ({
   const [specialRequirements, setSpecialRequirements] = useState('');
   const [enquiryType, setEnquiryType] = useState('CUSTOM_TOUR');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const selectedPackage = packages.find(item => item.id === packageId || item.package_id === packageId);
+  const selectedHotel = hotels.find(item => item.id === hotelId);
+  const selectedVehicle = vehicles.find(item => item.id === vehicleId);
 
   useEffect(() => {
     if (!visible) return;
@@ -166,35 +169,28 @@ export const CustomTourModal: React.FC<CustomTourModalProps> = ({
 
     setIsSubmitting(true);
     try {
-      const visitor_id = await getVisitorId();
-      const result = await createEnquiry({
-        enquiry_type: enquiryType,
-        channel: 'APP',
-        visitor_id,
-        customer_id: '',
-        package_id: packageId,
-        variant_id: '',
-        destination_id: destinationId,
-        message: `Destination: ${destination.trim()}`,
-        name: name.trim(),
-        phone: mobile.trim(),
-        email: '',
-        travel_date: travelDate.trim(),
-        travel_duration_day: 0,
-        travel_duration_night: 0,
-        adult_count: Number(paxNo) || 2,
-        child_count: 0,
-        senior_count: 0,
-        hotel_id: hotelId,
-        vehicle_id: vehicleId,
-        room_count: Number(noRoom) || 1,
-        vehicle_count: vehicleId || vehicleType ? 1 : 0,
-        budget_min: 0,
-        budget_max: 0,
-        special_requirements: specialRequirements.trim(),
-        meal_plan: mealPlan || 'ANY',
-      });
-      if (onSubmitSuccess) onSubmitSuccess(result);
+      const whatsappMessage = [
+        'Hello Gantabyaa team! 👋',
+        '',
+        'I would like to plan a custom tour:',
+        `Enquiry type: ${enquiryType || 'CUSTOM_TOUR'}`,
+        `Name: ${name.trim()}`,
+        `Mobile / WhatsApp: ${mobile.trim()}`,
+        `Destination: ${destination.trim()}`,
+        `Package: ${selectedPackage?.title || selectedPackage?.name || 'Custom package'}`,
+        `Departure date: ${travelDate.trim() || 'Not selected'}`,
+        `Duration: ${travelDuration.trim() || 'Not specified'}`,
+        `Travellers: ${paxNo || 0}`,
+        `Rooms: ${noRoom || 0}`,
+        `Vehicle type: ${vehicleType || 'ANY'}`,
+        `Vehicle: ${selectedVehicle?.name || selectedVehicle?.vehicle_name || vehicleId || 'Not selected'}`,
+        `Hotel: ${selectedHotel?.name || selectedHotel?.hotel_name || hotelId || 'Not selected'}`,
+        `Meal plan: ${mealPlan || 'ANY'}`,
+        `Special requirements: ${specialRequirements.trim() || 'None'}`,
+        '',
+        'Please help me with availability, pricing and a personalized itinerary.',
+      ].join('\n');
+      if (onSubmitSuccess) onSubmitSuccess({ channel: 'WHATSAPP', message: whatsappMessage });
       await showDialog({
         title: 'Custom Plan Requested! 🌟',
         message: `Thank you ${name}! Our holiday specialist will design a personalized itinerary for ${destination} and call you on ${mobile} within 24 hours.`,
@@ -202,6 +198,7 @@ export const CustomTourModal: React.FC<CustomTourModalProps> = ({
         confirmText: 'Awesome!',
       });
       handleClose();
+      openWhatsAppChat(whatsappMessage);
     } catch (error: any) {
       await showDialog({
         title: 'Could not submit',

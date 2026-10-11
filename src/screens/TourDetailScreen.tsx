@@ -20,6 +20,7 @@ import { fetchTourDetail, fetchTourVariant, fetchRulesRegulations, getTourWebUrl
 import { RuleRegulation } from '../api/types';
 import { TourDetailSkeleton } from '../components/Skeleton';
 import { MediaViewer, MediaSelection } from '../components/MediaViewer';
+import { EnquiryModal } from '../components/EnquiryModal';
 import { showApiError } from '../utils/toast';
 
 interface TourDetailScreenProps {
@@ -83,6 +84,7 @@ export const TourDetailScreen: React.FC<TourDetailScreenProps> = ({
   const [selectedMediaList, setSelectedMediaList] = useState<MediaSelection[] | null>(null);
   const [selectedDateDetail, setSelectedDateDetail] = useState<any | null>(null);
   const [dateModalVisible, setDateModalVisible] = useState(false);
+  const [enquiryModalVisible, setEnquiryModalVisible] = useState(false);
   const [selectedMediaIndex, setSelectedMediaIndex] = useState<number>(0);
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewText, setReviewText] = useState('');
@@ -180,19 +182,39 @@ export const TourDetailScreen: React.FC<TourDetailScreenProps> = ({
   const activeSeason: SeasonVariant | undefined =
     tour?.seasons?.[selectedSeasonIndex] || tour?.seasons?.[0];
 
+  const enquiryTour: TourPackageSummary | null = initialTour || (tour ? {
+    ...tour,
+    starting_price: activeSeason?.starting_price || activeSeason?.price || 0,
+    duration_days: activeSeason?.duration_days || 0,
+    duration_nights: activeSeason?.duration_nights || 0,
+    duration: activeSeason?.duration || '',
+    variant_count: tour.seasons?.length || 0,
+    cover_image: activeSeason?.cover_image || '',
+  } : null);
+
   const handleSeasonChange = async (index: number) => {
     setSelectedSeasonIndex(index);
     const selected = tour?.seasons?.[index];
     if (!selected || !tour) return;
-    if (selected.id || selected.key) {
+    const variantRecord = selected as SeasonVariant & { slug?: string; variant_slug?: string };
+    const variantKey = variantRecord.key || variantRecord.slug || variantRecord.variant_slug || variantRecord.id;
+    if (variantKey) {
       try {
-        const result = await fetchTourVariant(tour.slug, selected.key || selected.id);
-        setTour(current => current ? {...current, seasons: [current.seasons[0], result.variant, ...current.seasons.slice(2)]} : current);
+        const result = await fetchTourVariant(tour.slug, variantKey, tour.seasons);
+        setTour(current => {
+          if (!current) return current;
+          const seasons = [...current.seasons];
+          seasons[index] = result.variant;
+          return {...current, seasons};
+        });
+        if (result.variant.dates?.length) {
+          setSelectedDate(result.variant.dates[0].date);
+        }
       } catch (error) {
         showApiError(error, 'Could not load this package option.');
       }
     }
-    if (selected.dates?.length) {
+    if (!variantKey && selected.dates?.length) {
       setSelectedDate(selected.dates[0].date);
     }
   };
@@ -227,24 +249,28 @@ export const TourDetailScreen: React.FC<TourDetailScreenProps> = ({
     }
   };
 
-  const handleWhatsAppInquiry = () => {
+  const handleShareEnquiry = () => {
     if (!tour || !activeSeason) return;
-    const msg = `Hello Gantabya, I am interested in:\n- Tour: ${tour.title} (${tour.tour_code})\n- Season / Package: ${activeSeason.name}\n- Preferred Date: ${selectedDate || 'Upcoming departure'}\n- Duration: ${activeSeason.duration}\n- Quoted Price: ₹${activeSeason.price?.toLocaleString('en-IN')}\n\nPlease share booking details and seat availability!`;
+    const imageUrl = activeSeason.cover_image || initialTour?.cover_image || '';
+    const msg = [
+      'Hello Gantabyaa team! 👋',
+      '',
+      'I would like to enquire about this tour package:',
+      `Package: ${tour.title}`,
+      `Variant: ${activeSeason.name}`,
+      `Departure date: ${selectedDate || 'Upcoming departure'}`,
+      `Duration: ${activeSeason.duration}`,
+      activeSeason.price ? `Quoted price: ₹${activeSeason.price.toLocaleString('en-IN')}` : '',
+      imageUrl ? `Package image: ${imageUrl}` : '',
+      '',
+      'Please share availability, pricing and booking details.',
+    ].filter(Boolean).join('\n');
     openWhatsAppChat(msg);
   };
 
   const handleEnquirePress = () => {
     if (!tour || !activeSeason) return;
-    onStartEnquiry({
-      tourSlug: tour.slug,
-      tourTitle: tour.title,
-      variantName: activeSeason.name,
-      variantId: activeSeason.id,
-      destinationId: (tour as any).destination_id || '',
-      travelDate: selectedDate || (activeSeason.dates?.[0]?.date ?? ''),
-      durationDays: activeSeason.duration_days,
-      durationNights: activeSeason.duration_nights,
-    });
+    setEnquiryModalVisible(true);
   };
 
   const handleReviewSubmit = async () => {
@@ -846,19 +872,30 @@ export const TourDetailScreen: React.FC<TourDetailScreenProps> = ({
       <View style={styles.fixedBottomBar}>
         <Pressable
           style={styles.whatsappActionBtn}
-          onPress={handleWhatsAppInquiry}
+          onPress={handleShareEnquiry}
         >
           <FontAwesome name="whatsapp" size={20} color="#25D366" style={{ marginRight: 6 }} />
-          <Text style={styles.whatsappActionText}>WhatsApp</Text>
+          <Text style={styles.whatsappActionText}>Share Enquiry</Text>
         </Pressable>
 
         <Pressable
           style={styles.enquireActionBtn}
           onPress={handleEnquirePress}
         >
-          <Text style={styles.enquireActionText}>Enquire Now  →</Text>
+          <Text style={styles.enquireActionText}>Customise</Text>
         </Pressable>
       </View>
+
+      <EnquiryModal
+        visible={enquiryModalVisible}
+        onClose={() => setEnquiryModalVisible(false)}
+        tour={enquiryTour}
+        packageId={tour.id}
+        variantId={activeSeason.id}
+        destinationId={(tour as any).destination_id || ''}
+        travelDate={selectedDate || activeSeason.dates?.[0]?.date || ''}
+        departureDates={activeSeason.dates || []}
+      />
 
       {/* Fullscreen Media Viewer with Prev/Next Navigation */}
       {selectedMedia && (
@@ -1031,7 +1068,7 @@ export const TourDetailScreen: React.FC<TourDetailScreenProps> = ({
                       });
                     }}
                   >
-                    <Text style={styles.modalEnquireActionText}>Book / Enquire Date →</Text>
+                    <Text style={styles.modalEnquireActionText}>Customise with this date →</Text>
                   </Pressable>
                 </View>
               </>
