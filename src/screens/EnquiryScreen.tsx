@@ -350,9 +350,9 @@ export const EnquiryScreen: React.FC<EnquiryScreenProps> = ({
 
       await showDialog({
         title: 'Enquiry Received! 🌟',
-        message: `Thank you ${name}! Our holiday specialist will design a personalized itinerary for ${destination} and contact you on ${mobile} within 24 hours.`,
+        message: 'Your enquiry details are prepared in WhatsApp. Please press Send to share them with our travel team.',
         variant: 'success',
-        confirmText: 'Great!',
+        confirmText: 'Open WhatsApp',
       });
       resetForm();
       openWhatsAppChat(whatsappMessage);

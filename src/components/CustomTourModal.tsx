@@ -193,9 +193,9 @@ export const CustomTourModal: React.FC<CustomTourModalProps> = ({
       if (onSubmitSuccess) onSubmitSuccess({ channel: 'WHATSAPP', message: whatsappMessage });
       await showDialog({
         title: 'Custom Plan Requested! 🌟',
-        message: `Thank you ${name}! Our holiday specialist will design a personalized itinerary for ${destination} and call you on ${mobile} within 24 hours.`,
+        message: 'Your enquiry details are prepared in WhatsApp. Please press Send to share them with our travel team.',
         variant: 'success',
-        confirmText: 'Awesome!',
+        confirmText: 'Open WhatsApp',
       });
       handleClose();
       openWhatsAppChat(whatsappMessage);
