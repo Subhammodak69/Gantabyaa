@@ -11,7 +11,7 @@ import {
   Platform,
   KeyboardAvoidingView,
 } from 'react-native';
-import { COLORS, useColors } from '../theme/theme';
+import { useColors } from '../theme/theme';
 import { useAppDialog } from './AppDialog';
 import { CustomDateField } from './CustomDatePicker';
 import { fetchHotels, fetchTourPackages, fetchVehicles, openWhatsAppChat } from '../api/tourApi';
