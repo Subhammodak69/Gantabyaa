@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable, Image } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { useColors } from '../theme/theme';
+import { useTheme } from '../theme/theme';
 
 interface HeaderProps {
   title?: string;
@@ -24,7 +24,7 @@ export const Header: React.FC<HeaderProps> = ({
   unreadCount = 0,
   rightAction,
 }) => {
-  const COLORS = useColors();
+  const { colors: COLORS, isDark } = useTheme();
   const styles = makeStyles(COLORS);
   const iconColor = COLORS.text;
 
@@ -53,7 +53,9 @@ export const Header: React.FC<HeaderProps> = ({
       <View style={styles.titleSection}>
         <View style={styles.brandRow}>
           <Image
-            source={require('../assets/gantabya-transparent.png')}
+            source={isDark
+              ? require('../assets/gantabya-transparent-dark.png')
+              : require('../assets/gantabya-transparent.png')}
             style={styles.headerLogo}
             resizeMode="contain"
           />
@@ -92,7 +94,7 @@ export const Header: React.FC<HeaderProps> = ({
   );
 };
 
-const makeStyles = (COLORS: ReturnType<typeof useColors>) => StyleSheet.create({
+const makeStyles = (COLORS: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   headerSpacer: {
     width: 38,
   },

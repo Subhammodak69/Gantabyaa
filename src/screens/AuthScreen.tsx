@@ -265,7 +265,9 @@ export const AuthScreen: React.FC<Props> = ({ onLoginSuccess }) => {
         <View style={styles.heroSection}>
           <View style={styles.logoCircle}>
             <Image
-              source={require('../assets/gantabya-transparent.png')}
+              source={isDark
+                ? require('../assets/gantabya-transparent-dark.png')
+                : require('../assets/gantabya-transparent.png')}
               style={styles.brandLogo}
               resizeMode="contain"
             />
@@ -467,8 +469,8 @@ const makeStyles = (COLORS: ReturnType<typeof useTheme>['colors'], isDark: boole
       alignSelf: 'center',
     },
     logoCircle: {
-      width: 208,
-      height: 194,
+      width: 120,
+      height: 118,
       borderRadius: 0,
       backgroundColor: 'transparent',
       justifyContent: 'center',
@@ -478,8 +480,8 @@ const makeStyles = (COLORS: ReturnType<typeof useTheme>['colors'], isDark: boole
       overflow: 'visible',
     },
     brandLogo: {
-      width: 208,
-      height: 194,
+      width: 120,
+      height: 118,
       borderRadius: 0,
     },
     brandTitle: {

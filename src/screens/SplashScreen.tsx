@@ -9,7 +9,7 @@ import {
   Animated,
   ActivityIndicator,
 } from 'react-native';
-import { COLORS } from '../theme/theme';
+import { COLORS, useTheme } from '../theme/theme';
 
 interface SplashScreenProps {
   onFinished: () => void;
@@ -27,6 +27,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
   onLoginPress,
 }) => {
   const entrance = useRef(new Animated.Value(0)).current;
+  const { isDark } = useTheme();
   useEffect(() => {
     Animated.timing(entrance, {
       toValue: 1,
@@ -71,7 +72,9 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
           <Text style={styles.brandEyebrow}>TRAVEL · DISCOVER · REPEAT</Text>
           <View style={styles.logoCircle}>
             <Image
-              source={require('../assets/gantabya-transparent.png')}
+              source={isDark
+                ? require('../assets/gantabya-transparent-dark.png')
+                : require('../assets/gantabya-transparent.png')}
               style={styles.brandLogo}
               resizeMode="contain"
             />
