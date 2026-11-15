@@ -192,7 +192,6 @@ export const EnquiryDetailsScreen: React.FC<Props> = ({enquiry, onEdit, onBack, 
       <Detail icon="user" label="Children" value={fieldValue(enquiry, 'children', 'child_count')} styles={styles} colors={colors} />
       <Detail icon="user" label="Seniors" value={fieldValue(enquiry, 'senior_count', 'seniorCount')} styles={styles} colors={colors} />
       <Detail icon="home" label="Rooms" value={fieldValue(enquiry, 'room_count', 'no_room', 'roomCount')} styles={styles} colors={colors} />
-      <Detail icon="home" label="Hotel" value={fieldValue(enquiry, 'hotel_name', 'hotelName', 'hotel')} styles={styles} colors={colors} />
       <Detail icon="truck" label="Vehicles" value={fieldValue(enquiry, 'vehicle_count', 'vehicleCount')} styles={styles} colors={colors} />
       <Detail icon="truck" label="Vehicle" value={fieldValue(enquiry, 'vehicle_name', 'vehicleName', 'vehicle')} styles={styles} colors={colors} />
       <Detail icon="credit-card" label="Budget range" value={budget} styles={styles} colors={colors} />

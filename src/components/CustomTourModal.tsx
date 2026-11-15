@@ -14,7 +14,7 @@ import {
 import { useColors } from '../theme/theme';
 import { useAppDialog } from './AppDialog';
 import { CustomDateField } from './CustomDatePicker';
-import { fetchHotels, fetchTourPackages, fetchVehicles, openWhatsAppChat } from '../api/tourApi';
+import { fetchTourPackages, fetchVehicles, openWhatsAppChat } from '../api/tourApi';
 import enums from '../utils/enums.json';
 
 interface CustomTourModalProps {
@@ -86,11 +86,8 @@ export const CustomTourModal: React.FC<CustomTourModalProps> = ({
   const [destinationId, setDestinationId] = useState('');
   const [packageId, setPackageId] = useState('');
   const [packages, setPackages] = useState<any[]>([]);
-  const [hotelId, setHotelId] = useState('');
   const [vehicleId, setVehicleId] = useState('');
-  const [hotels, setHotels] = useState<any[]>([]);
   const [vehicles, setVehicles] = useState<any[]>([]);
-  const [facilitiesLoading, setFacilitiesLoading] = useState(false);
   const [travelDate, setTravelDate] = useState('');
   const [travelDuration, setTravelDuration] = useState('');
   const [paxNo, setPaxNo] = useState('2');
@@ -101,7 +98,6 @@ export const CustomTourModal: React.FC<CustomTourModalProps> = ({
   const [enquiryType, setEnquiryType] = useState('CUSTOM_TOUR');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const selectedPackage = packages.find(item => item.id === packageId || item.package_id === packageId);
-  const selectedHotel = hotels.find(item => item.id === hotelId);
   const selectedVehicle = vehicles.find(item => item.id === vehicleId);
 
   useEffect(() => {
@@ -113,21 +109,14 @@ export const CustomTourModal: React.FC<CustomTourModalProps> = ({
 
   useEffect(() => {
     if (!visible || !destinationId) {
-      setHotels([]);
       setVehicles([]);
       return;
     }
-    setFacilitiesLoading(true);
-    Promise.all([fetchHotels(1, 20, destinationId), fetchVehicles(1, 20)])
-      .then(([hotelResponse, vehicleResponse]) => {
-        setHotels(Array.isArray(hotelResponse.data) ? hotelResponse.data : []);
-        setVehicles(Array.isArray(vehicleResponse.data) ? vehicleResponse.data : []);
-      })
+    fetchVehicles(1, 20)
+      .then(vehicleResponse => setVehicles(Array.isArray(vehicleResponse.data) ? vehicleResponse.data : []))
       .catch(() => {
-        setHotels([]);
         setVehicles([]);
       })
-      .finally(() => setFacilitiesLoading(false));
   }, [visible, destinationId]);
 
   const resetForm = () => {
@@ -136,7 +125,6 @@ export const CustomTourModal: React.FC<CustomTourModalProps> = ({
     setDestination('');
     setDestinationId('');
     setPackageId('');
-    setHotelId('');
     setVehicleId('');
     setTravelDate('');
     setTravelDuration('');
@@ -184,7 +172,6 @@ export const CustomTourModal: React.FC<CustomTourModalProps> = ({
         `Rooms: ${noRoom || 0}`,
         `Vehicle type: ${vehicleType || 'ANY'}`,
         `Vehicle: ${selectedVehicle?.name || selectedVehicle?.vehicle_name || vehicleId || 'Not selected'}`,
-        `Hotel: ${selectedHotel?.name || selectedHotel?.hotel_name || hotelId || 'Not selected'}`,
         `Meal plan: ${mealPlan || 'ANY'}`,
         `Special requirements: ${specialRequirements.trim() || 'None'}`,
         '',
@@ -290,7 +277,6 @@ export const CustomTourModal: React.FC<CustomTourModalProps> = ({
                 setPackageId('');
                 setDestinationId('');
                 setDestination('');
-                setHotelId('');
                 setVehicleId('');
                 if (choice === 'PACKAGE' && packages.length > 0) {
                   const item = packages[0];
@@ -312,7 +298,6 @@ export const CustomTourModal: React.FC<CustomTourModalProps> = ({
                     setPackageId(value);
                     setDestinationId(item?.destination_id || '');
                     setDestination(item?.destination || item?.destination_name || '');
-                    setHotelId('');
                     setVehicleId('');
                   }}
                   styles={styles}
@@ -326,7 +311,6 @@ export const CustomTourModal: React.FC<CustomTourModalProps> = ({
                     setPackageId('');
                     setDestinationId(value);
                     setDestination(item?.destination || item?.destination_name || '');
-                    setHotelId('');
                     setVehicleId('');
                   }}
                   styles={styles}
@@ -389,15 +373,6 @@ export const CustomTourModal: React.FC<CustomTourModalProps> = ({
               options={[{ label: 'Any', value: '' }, ...vehicleOptions]}
               value={vehicleType}
               onChange={setVehicleType}
-              styles={styles}
-            />
-
-            <Text style={styles.label}>PREFERRED HOTEL</Text>
-            {facilitiesLoading ? <ActivityIndicator size="small" color={COLORS.primary} /> : null}
-            <ChipSelector
-              options={[{ label: 'Any', value: '' }, ...hotels.map(hotel => ({ label: hotel.name, value: hotel.id }))]}
-              value={hotelId}
-              onChange={setHotelId}
               styles={styles}
             />
 

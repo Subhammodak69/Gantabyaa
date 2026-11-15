@@ -12,7 +12,7 @@ import {
   NavScreen,
   TravelDocument,
 } from './src/types';
-import { DestinationRecord, HotelRecord } from './src/api/types';
+import { DestinationRecord } from './src/api/types';
 import { fetchTourPackages, fetchAllDestinations, fetchMe, fetchEnquiries, fetchWishlist, fetchNotifications, markNotificationRead, markAllNotificationsRead as markAllNotificationsReadApi, getAccessToken, refreshSession, logout as logoutApi, identifyVisitor, getTrackedVisitorId, startVisitorSession, heartbeatVisitorSession, endVisitorSession, trackVisitorEvent, AuthUser, EnquiryRecord, addWishlistItem, removeWishlistItem, validateReferralCode, REFERRAL_CODE_KEY } from './src/api/tourApi';
 import { createNotificationSocket, createVisitorSocket } from './src/realtime/socket';
 
@@ -26,7 +26,6 @@ import { SplashScreen } from './src/screens/SplashScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { DestinationsScreen } from './src/screens/DestinationsScreen';
 import { DestinationDetailsScreen } from './src/screens/DestinationDetailsScreen';
-import { HotelDetailsScreen } from './src/screens/HotelDetailsScreen';
 import { TourListScreen } from './src/screens/TourListScreen';
 import { TourDetailScreen } from './src/screens/TourDetailScreen';
 import { EnquiryScreen } from './src/screens/EnquiryScreen';
@@ -170,8 +169,6 @@ function AppInner() {
   const [tours, setTours] = useState<TourPackageSummary[]>([]);
   const [destinations, setDestinations] = useState<DestinationRecord[]>([]);
   const [selectedDestination, setSelectedDestination] = useState<DestinationRecord | null>(null);
-  const [selectedHotel, setSelectedHotel] = useState<HotelRecord | null>(null);
-  const [selectedHotelDestinationName, setSelectedHotelDestinationName] = useState('');
   const [loadingDestinations, setLoadingDestinations] = useState(true);
   const [loadingTours, setLoadingTours] = useState(true);
 
@@ -489,12 +486,6 @@ function AppInner() {
     navigateTo('destination_detail');
   };
 
-  const handleSelectHotel = (hotel: HotelRecord) => {
-    setSelectedHotel(hotel);
-    setSelectedHotelDestinationName(selectedDestination?.name || '');
-    navigateTo('hotel_detail');
-  };
-
   const handleFilterTours = (
     type: 'ALL' | 'DOMESTIC' | 'INTERNATIONAL' | 'FEATURED'
   ) => {
@@ -649,20 +640,10 @@ function AppInner() {
             destination={selectedDestination}
             onBack={goBack}
             onSelectTour={handleSelectTour}
-            onSelectHotel={handleSelectHotel}
             savedTours={savedTours}
             onToggleSave={toggleSaveTour}
           />
         ) : <DestinationsScreen destinations={destinations} loading={loadingDestinations} onRefresh={loadDestinations} onBack={goBack} onSelectDestination={handleSelectDestination} />;
-
-      case 'hotel_detail':
-        return selectedHotel ? (
-          <HotelDetailsScreen
-            hotel={selectedHotel}
-            destinationName={selectedHotelDestinationName}
-            onBack={goBack}
-          />
-        ) : null;
 
       case 'tours':
         return (
