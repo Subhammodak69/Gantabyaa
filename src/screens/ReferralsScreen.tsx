@@ -41,6 +41,12 @@ export const ReferralsScreen: React.FC = () => {
     <Text style={styles.title}>Refer & earn</Text>
     <Text style={styles.subtitle}>Invite someone to discover their next journey.</Text>
     <View style={styles.hero}><Text style={styles.heroIcon}>↗</Text><Text style={styles.heroTitle}>Your invite is ready</Text><Text style={styles.heroText}>Share a private invite link. Your referral details stay hidden.</Text><Pressable style={styles.shareButton} onPress={share} disabled={!shareLink || loading}><Text style={styles.shareText}>{loading ? 'Loading...' : 'Share invite link'}</Text></Pressable></View>
+    <View style={styles.criteria}>
+      <Text style={styles.criteriaTitle}>How to earn a referral reward</Text>
+      <Text style={styles.criteriaText}><Text style={styles.criteriaEmphasis}>1. Invite someone new. </Text>Share your link with someone who does not already have a Gantabyaa account.</Text>
+      <Text style={styles.criteriaText}><Text style={styles.criteriaEmphasis}>2. They sign up through your link. </Text>The referral must be connected when they create their account; existing accounts cannot be added later.</Text>
+      <Text style={styles.criteriaText}><Text style={styles.criteriaEmphasis}>3. They complete a booking. </Text>The referral is reviewed after booking completion. A reward is given only if it is approved; its amount and booking window follow the referral settings.</Text>
+    </View>
     <Text style={styles.sectionTitle}>Referral activity</Text>
     {loading ? <ReferralListSkeleton count={3} /> : referrals.length === 0 ? <Text style={styles.empty}>No referral activity yet.</Text> : referrals.map(item => {
       const customer = item.referred_customer || {};
@@ -95,6 +101,10 @@ const makeStyles = (COLORS: AppColors) => StyleSheet.create({
   heroText: {fontSize: 12, color: COLORS.textSecondary, lineHeight: 18, marginTop: 5},
   shareButton: {backgroundColor: COLORS.goldDark, borderRadius: 9, alignItems: 'center', paddingVertical: 12, marginTop: 17},
   shareText: {color: COLORS.textLight, fontWeight: '900', fontSize: 12},
+  criteria: {backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.border, borderRadius: 11, padding: 15, marginBottom: 22, gap: 10},
+  criteriaTitle: {fontSize: 14, fontWeight: '900', color: COLORS.text},
+  criteriaText: {fontSize: 11, color: COLORS.textSecondary, lineHeight: 17},
+  criteriaEmphasis: {fontWeight: '800', color: COLORS.text},
   sectionTitle: {fontSize: 12, fontWeight: '900', color: COLORS.textMuted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 9},
   empty: {fontSize: 13, color: COLORS.textSecondary, paddingVertical: 25},
   row: {backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.border, borderRadius: 11, padding: 13, marginBottom: 10},
