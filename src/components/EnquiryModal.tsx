@@ -28,6 +28,14 @@ import { TourPackageSummary } from '../types';
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const isValidUUID = (val?: string) => typeof val === 'string' && UUID_REGEX.test(val.trim());
 
+function durationValue(value: unknown, source: unknown, suffix: 'D' | 'N'): number {
+  const number = Number(value);
+  if (value != null && value !== '' && Number.isFinite(number) && number > 0) return number;
+  const unit = suffix === 'D' ? '(?:days?|d)' : '(?:nights?|n)';
+  const match = String(source || '').match(new RegExp(`(\\d+)\\s*${unit}\\b`, 'i'));
+  return match ? Number(match[1]) : 0;
+}
+
 const departureDateLabel = (value: string) => {
   const [year, month, day] = String(value).slice(0, 10).split('-').map(Number);
   if (!year || !month || !day) return value;
@@ -112,8 +120,16 @@ export const EnquiryModal: React.FC<EnquiryModalProps> = ({
       duration_nights: tour?.duration_nights,
       starting_price: tour?.starting_price,
     } : undefined);
-  const travelDurationDay = Number(selectedVariant?.duration_days || tour?.duration_days || 0);
-  const travelDurationNight = Number(selectedVariant?.duration_nights || tour?.duration_nights || 0);
+  const travelDurationDay = durationValue(
+    selectedVariant?.duration_days || selectedVariant?.duration_day || tour?.duration_days,
+    selectedVariant?.duration || tour?.duration,
+    'D',
+  );
+  const travelDurationNight = durationValue(
+    selectedVariant?.duration_nights || selectedVariant?.duration_night || tour?.duration_nights,
+    selectedVariant?.duration || tour?.duration,
+    'N',
+  );
   const variantLabel = selectedVariant?.name || selectedVariant?.season_name || tour?.season_name || '';
   const departureDateOptions = (selectedVariant?.dates || departureDates)
     .filter((item: any) => item.date || item.departure_date)

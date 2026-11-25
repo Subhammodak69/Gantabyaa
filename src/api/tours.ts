@@ -47,8 +47,13 @@ function unwrapVariantDetail(payload: any): any {
 }
 
 function durationValue(value: unknown, source: unknown, suffix: string): number {
-  if (value != null && value !== '' && Number.isFinite(Number(value))) return Number(value);
-  const match = String(source || '').match(new RegExp(`(\\d+)\\s*${suffix}\\b`, 'i'));
+  const values = Array.isArray(value) ? value : [value];
+  for (const candidate of values) {
+    const number = Number(candidate);
+    if (candidate != null && candidate !== '' && Number.isFinite(number) && number > 0) return number;
+  }
+  const unit = suffix === 'D' ? '(?:days?|d)' : '(?:nights?|n)';
+  const match = textValue(source).match(new RegExp(`(\\d+)\\s*${unit}\\b`, 'i'));
   return match ? Number(match[1]) : 0;
 }
 
@@ -65,8 +70,16 @@ function formatVariant(v: any, i = 0): SeasonVariant {
   const realId = v.variant_id || v.id;
   const variantSlug = v.slug || v.variant_slug || '';
   const price = v.selling_price ?? v.price ?? v.starting_price ?? v.list_price ?? 0;
-  const durationDays = durationValue(v.duration_days, v.duration, 'D');
-  const durationNights = durationValue(v.duration_nights, v.duration, 'N');
+  const route = listValue(v.route);
+  const itinerary = listValue(v.itinerary);
+  const routeNights = route.reduce((total, stop) => total + (Number(stop?.nights) || 0), 0);
+  const durationSource = v.duration || v.travel_duration;
+  const durationDays = durationValue([v.duration_days, v.duration_day, v.travel_duration_day], durationSource, 'D')
+    || itinerary.length
+    || (routeNights ? routeNights + 1 : 0);
+  const durationNights = durationValue([v.duration_nights, v.duration_night, v.travel_duration_night], durationSource, 'N')
+    || routeNights
+    || Math.max(itinerary.length - 1, 0);
   return {
     id: realId || `variant-${i}`,
     key: variantSlug,
@@ -80,7 +93,7 @@ function formatVariant(v: any, i = 0): SeasonVariant {
     banner_video: v.banner?.video || '',
     valid_from: v.valid_from || '',
     valid_to: v.valid_to || '',
-    duration: v.duration || `${durationNights}N | ${durationDays}D`,
+    duration: textValue(durationSource) || `${durationNights}N | ${durationDays}D`,
     duration_days: durationDays,
     duration_nights: durationNights,
     price: Number(price || 0),
@@ -90,7 +103,7 @@ function formatVariant(v: any, i = 0): SeasonVariant {
     availability: v.availability || (Number(v.available_seats ?? 0) > 0 ? 'AVAILABLE' : 'SOLD_OUT'),
     is_active: true,
     is_default: i === 0,
-    route: listValue(v.route).map((x: any) => ({
+    route: route.map((x: any) => ({
       id: String(x.id || ''),
       place: textValue(x.city) || textValue(x.place),
       nights: Number(x.nights || 0),
@@ -115,7 +128,7 @@ function formatVariant(v: any, i = 0): SeasonVariant {
       type: x.type,
       display_order: x.display_order,
     })),
-    itinerary: listValue(v.itinerary).map((x: any) => ({
+    itinerary: itinerary.map((x: any) => ({
       id: String(x.id || ''),
       day: String(x.day || ''),
       title: textValue(x.title),
@@ -128,6 +141,21 @@ function formatVariant(v: any, i = 0): SeasonVariant {
 
 function formatSummary(x: any): TourPackageSummary {
   const packageSlug = x.slug || x.tour_slug || x.package_slug || '';
+  const defaultVariant = x.default_variant || {};
+  const durationSource = x.duration || defaultVariant.duration;
+  const packageRoute = listValue(x.route || defaultVariant.route);
+  const packageItinerary = listValue(x.itinerary || defaultVariant.itinerary);
+  const routeNights = packageRoute.reduce((total, stop) => total + (Number(stop?.nights) || 0), 0);
+  const durationDays = durationValue(
+    [x.duration_days, x.duration_day, x.travel_duration_day, defaultVariant.duration_days, defaultVariant.duration_day],
+    durationSource,
+    'D',
+  ) || packageItinerary.length || (routeNights ? routeNights + 1 : 0);
+  const durationNights = durationValue(
+    [x.duration_nights, x.duration_night, x.travel_duration_night, defaultVariant.duration_nights, defaultVariant.duration_night],
+    durationSource,
+    'N',
+  ) || routeNights || Math.max(packageItinerary.length - 1, 0);
   return {
     ...x,
     tour_code: textValue(x.tour_code) || textValue(x.code),
@@ -137,9 +165,9 @@ function formatSummary(x: any): TourPackageSummary {
     description: textValue(x.description),
     variant_count: Number(x.variant_count || 0),
     starting_price: Number(x.selling_price ?? x.starting_price ?? x.price ?? 0),
-    duration_days: Number(x.duration_days ?? 0),
-    duration_nights: Number(x.duration_nights ?? 0),
-    duration: textValue(x.duration),
+    duration_days: durationDays,
+    duration_nights: durationNights,
+    duration: textValue(durationSource) || `${durationNights}N | ${durationDays}D`,
     cover_image: x.cover_image || x.banner?.image || '',
     banner_video: x.banner_video || x.banner?.video || '',
     season_name: x.season_name || '',

@@ -12,6 +12,7 @@ import {
   Image,
   Keyboard,
   KeyboardAvoidingView,
+  PanResponder,
   Platform,
 } from 'react-native';
 import { BlurView } from '@react-native-community/blur';
@@ -81,10 +82,29 @@ function SearchableSelect({
   const [visible, setVisible] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [search, setSearch] = useState('');
+  const [sheetExpanded, setSheetExpanded] = useState(false);
   const selected = options.find(option => option.value === value);
   const filteredOptions = options.filter(option =>
     option.label.toLowerCase().includes(search.trim().toLowerCase()),
   );
+  const closeSheet = React.useCallback(() => {
+    Keyboard.dismiss();
+    setVisible(false);
+    setSheetExpanded(false);
+  }, []);
+  const sheetPanResponder = React.useMemo(() => PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponder: (_, gestureState) => Math.abs(gestureState.dy) > 6,
+    onPanResponderRelease: (_, gestureState) => {
+      if (gestureState.dy < -40) {
+        setSheetExpanded(true);
+      } else if (gestureState.dy > 120) {
+        closeSheet();
+      } else if (gestureState.dy > 40) {
+        setSheetExpanded(false);
+      }
+    },
+  }), [closeSheet]);
 
   React.useEffect(() => {
     if (!visible) {
@@ -103,13 +123,13 @@ function SearchableSelect({
 
   return (
     <>
-      <Pressable style={styles.selectButton} onPress={() => { setSearch(''); setVisible(true); }}>
+      <Pressable style={styles.selectButton} onPress={() => { setSearch(''); setSheetExpanded(false); setVisible(true); }}>
         <Text style={[styles.selectText, !selected && styles.selectPlaceholder]} numberOfLines={1}>
           {selected?.label || placeholder}
         </Text>
         <Text style={styles.selectArrow}>⌄</Text>
       </Pressable>
-      <Modal visible={visible} transparent animationType="slide" onRequestClose={() => setVisible(false)}>
+      <Modal visible={visible} transparent animationType="slide" onRequestClose={closeSheet}>
         <KeyboardAvoidingView
           style={styles.selectBackdrop}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -117,15 +137,19 @@ function SearchableSelect({
           <BlurView
             style={StyleSheet.absoluteFill}
             blurType={isDark ? 'dark' : 'light'}
-            blurAmount={18}
+            blurAmount={2}
           />
           <View pointerEvents="none" style={styles.selectTint} />
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => setVisible(false)} />
+          <Pressable style={StyleSheet.absoluteFill} onPress={closeSheet} />
           <View style={[
             styles.selectDialog,
+            sheetExpanded && styles.selectDialogExpanded,
             keyboardVisible && styles.selectDialogKeyboard,
             keyboardVisible && {paddingTop: insets.top + 20},
           ]}>
+            <View style={styles.selectDragArea} {...sheetPanResponder.panHandlers}>
+              <View style={styles.selectDragHandle} />
+            </View>
             <Text style={styles.selectTitle}>{placeholder}</Text>
             <TextInput
               value={search}
@@ -147,7 +171,7 @@ function SearchableSelect({
                   style={styles.selectOption}
                   onPress={() => {
                     onChange(item.value);
-                    setVisible(false);
+                    closeSheet();
                   }}
                 >
                   <Text style={[styles.selectOptionText, item.value === value && styles.selectOptionActive]}>
@@ -878,10 +902,11 @@ const makeStyles = (COLORS: ReturnType<typeof useTheme>['colors'], isDark: boole
     },
     selectTint: {
       ...StyleSheet.absoluteFill,
-      backgroundColor: isDark ? 'rgba(0,0,0,0.12)' : 'rgba(15,23,42,0.12)',
+      backgroundColor: isDark ? 'rgba(0,0,0,0.03)' : 'rgba(15,23,42,0.03)',
     },
     selectDialog: {
       width: '100%',
+      height: '60%',
       maxHeight: '60%',
       backgroundColor: COLORS.card,
       borderTopLeftRadius: 22,
@@ -890,6 +915,10 @@ const makeStyles = (COLORS: ReturnType<typeof useTheme>['colors'], isDark: boole
       paddingTop: 18,
       paddingBottom: 20,
     },
+    selectDialogExpanded: {
+      height: '90%',
+      maxHeight: '90%',
+    },
     selectDialogKeyboard: {
       height: '100%',
       maxHeight: '100%',
@@ -897,8 +926,21 @@ const makeStyles = (COLORS: ReturnType<typeof useTheme>['colors'], isDark: boole
       borderBottomRightRadius: 0,
       paddingBottom: 8,
     },
+    selectDragArea: {
+      height: 24,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: -10,
+      marginBottom: 7,
+    },
+    selectDragHandle: {
+      width: 40,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: COLORS.border,
+    },
     selectList: {
-      flexShrink: 1,
+      flex: 1,
     },
     selectTitle: {
       color: COLORS.text,
