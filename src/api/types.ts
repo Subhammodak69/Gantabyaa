@@ -72,11 +72,9 @@ export interface DestinationRecord {
 export interface VehicleRecord {
   id: string;
   name: string;
-  vehicle_image?: ResourceImage[];
   vehicle_type?: string;
   registration_number?: string;
   capacity?: number;
-  price_per_day?: string | number;
 }
 
 export interface AuthUser {
