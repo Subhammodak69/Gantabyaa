@@ -882,7 +882,7 @@ export const TourDetailScreen: React.FC<TourDetailScreenProps> = ({
           style={styles.enquireActionBtn}
           onPress={handleEnquirePress}
         >
-          <Text style={styles.enquireActionText}>Customise</Text>
+          <Text style={styles.enquireActionText}>Enquire</Text>
         </Pressable>
       </View>
 
@@ -893,7 +893,7 @@ export const TourDetailScreen: React.FC<TourDetailScreenProps> = ({
         packageId={tour.id}
         variantId={activeSeason.id}
         destinationId={(tour as any).destination_id || ''}
-        travelDate={selectedDate || activeSeason.dates?.[0]?.date || ''}
+        travelDate={selectedDate || activeSeason.dates?.[0]?.departure_date || activeSeason.dates?.[0]?.date || ''}
         departureDates={activeSeason.dates || []}
       />
 
