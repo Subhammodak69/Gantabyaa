@@ -18,6 +18,7 @@ import Feather from 'react-native-vector-icons/Feather';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/theme';
 import { useAppDialog } from '../components/AppDialog';
+import { CustomDateField } from '../components/CustomDatePicker';
 import { fetchDestinations, fetchTourPackageVariants, fetchTourPackages, openWhatsAppChat } from '../api/tourApi';
 import enums from '../utils/enums.json';
 import { NavScreen } from '../types';
@@ -174,6 +175,23 @@ const mealOptions: ChipOption[] = Object.entries(enums.MealPlan).map(([, v]) => 
   label: v as string,
   value: v as string,
 }));
+const hotelCategoryOptions: ChipOption[] = [
+  { label: 'Budget', value: 'BUDGET' },
+  { label: 'Standard', value: 'STANDARD' },
+  { label: 'Deluxe', value: 'DELUXE' },
+  { label: 'Luxury', value: 'LUXURY' },
+];
+const roomTypeOptions: ChipOption[] = [
+  { label: 'Single', value: 'SINGLE' },
+  { label: 'Double', value: 'DOUBLE' },
+  { label: 'Twin', value: 'TWIN' },
+  { label: 'Triple', value: 'TRIPLE' },
+  { label: 'Family', value: 'FAMILY' },
+  { label: 'Suite', value: 'SUITE' },
+  { label: 'Deluxe', value: 'DELUXE' },
+  { label: 'Executive', value: 'EXECUTIVE' },
+  { label: 'Presidential', value: 'PRESIDENTIAL' },
+];
 const enquiryTypeOptions: ChipOption[] = Object.entries(enums.EnquiryType)
   .filter(([, v]) => {
     const val = String(v).toUpperCase().replace(/[\s_-]+/g, '');
@@ -183,6 +201,12 @@ const enquiryTypeOptions: ChipOption[] = Object.entries(enums.EnquiryType)
     label: (v as string).replace(/_/g, ' '),
     value: v as string,
   }));
+const STEPS = [
+  { title: 'Contact details', description: 'Who should we contact?' },
+  { title: 'Choose your trip', description: 'Destination or tour package' },
+  { title: 'Travel plans', description: 'Dates and travellers' },
+  { title: 'Preferences', description: 'Stay, transport and budget' },
+];
 
 export const EnquiryScreen: React.FC<EnquiryScreenProps> = ({
   onBack,
@@ -200,8 +224,8 @@ export const EnquiryScreen: React.FC<EnquiryScreenProps> = ({
   const [destinationId, setDestinationId] = useState(prefilled?.destinationId || '');
   const [packageId, setPackageId] = useState(prefilled?.packageId || '');
   const [variantId, setVariantId] = useState(prefilled?.variantId || '');
-  const [selectionMode, setSelectionMode] = useState<'PACKAGE' | 'DESTINATION'>(
-    prefilled?.packageId ? 'PACKAGE' : 'DESTINATION',
+  const [selectionMode, setSelectionMode] = useState<'PACKAGE' | 'DESTINATION' | ''>(
+    prefilled?.packageId ? 'PACKAGE' : prefilled?.destinationId ? 'DESTINATION' : '',
   );
   const [packages, setPackages] = useState<any[]>([]);
   const [destinations, setDestinations] = useState<any[]>([]);
@@ -209,19 +233,25 @@ export const EnquiryScreen: React.FC<EnquiryScreenProps> = ({
   const [travelDate, setTravelDate] = useState(prefilled?.travelDate || '');
   const [travelDurationDay, setTravelDurationDay] = useState('');
   const [travelDurationNight, setTravelDurationNight] = useState('');
-  const [adultCount, setAdultCount] = useState('4');
+  const [adultCount, setAdultCount] = useState('2');
   const [childCount, setChildCount] = useState('0');
   const [seniorCount, setSeniorCount] = useState('0');
-  const [noRoom, setNoRoom] = useState('2');
+  const [noRoom, setNoRoom] = useState('1');
   const [vehicleCount, setVehicleCount] = useState('0');
   const [budgetMin, setBudgetMin] = useState('');
   const [budgetMax, setBudgetMax] = useState('');
   const [vehicleType, setVehicleType] = useState('ANY');
   const [mealPlan, setMealPlan] = useState('ANY');
+  const [hotelCategory, setHotelCategory] = useState('');
+  const [roomType, setRoomType] = useState('');
   const [message, setMessage] = useState('');
   const [specialRequirements, setSpecialRequirements] = useState('');
   const [enquiryType, setEnquiryType] = useState('CUSTOM_TOUR');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [step, setStep] = useState(0);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [variantsLoading, setVariantsLoading] = useState(false);
+  const [variantsError, setVariantsError] = useState('');
   const selectedPackage = packages.find(item => item.id === packageId);
   const selectedVariant = variants.find(item =>
     item.id === variantId || item.key === variantId || item.name === variantId,
@@ -240,6 +270,10 @@ export const EnquiryScreen: React.FC<EnquiryScreenProps> = ({
       const value = item.date || item.departure_date || '';
       return { label: item.return_date ? `${departureDateLabel(value)} – ${departureDateLabel(item.return_date)}` : departureDateLabel(value), value };
     });
+  const selectionIsValid = selectionMode === 'PACKAGE'
+    ? Boolean(packageId) && !variantsLoading && (!variants.length || Boolean(selectedVariant))
+    : selectionMode === 'DESTINATION' && Boolean(destinationId);
+  const contactIsValid = Boolean(name.trim()) && mobile.replace(/\D/g, '').length >= 10;
 
   React.useEffect(() => {
     fetchTourPackages(1, 50).then(setPackages).catch(() => setPackages([]));
@@ -250,22 +284,29 @@ export const EnquiryScreen: React.FC<EnquiryScreenProps> = ({
     const packageRef = selectedPackage?.slug || (selectedPackage ? packageId : '');
     if (!packageRef) {
       setVariants([]);
+      setVariantsLoading(false);
+      setVariantsError('');
       return;
     }
+    let active = true;
+    setVariantsLoading(true);
+    setVariantsError('');
     fetchTourPackageVariants(packageRef)
       .then(result => {
-        setVariants(result.variants);
-        const current = result.variants.find(item =>
-          item.id === variantId || item.key === variantId || item.name === variantId,
-        );
-        if (current && current.id !== variantId) setVariantId(current.id);
-        else if (!current && result.variants.length > 0) {
-          const defaultVariant = result.variants.find(item => item.is_default) || result.variants[0];
-          setVariantId(defaultVariant.id);
-        }
+        if (active) setVariants(result.variants);
       })
-      .catch(() => setVariants([]));
-  }, [packageId, packages, selectedPackage, variantId]);
+      .catch((error: any) => {
+        if (!active) return;
+        setVariants([]);
+        setVariantsError(error?.message || 'Unable to load package variants.');
+      })
+      .finally(() => {
+        if (active) setVariantsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [packageId, packages, selectedPackage]);
 
   // Auto-sync logged in user info if available
   React.useEffect(() => {
@@ -284,37 +325,35 @@ export const EnquiryScreen: React.FC<EnquiryScreenProps> = ({
     setDestinationId('');
     setPackageId('');
     setVariantId('');
-    setSelectionMode(prefilled?.packageId ? 'PACKAGE' : 'DESTINATION');
+    setSelectionMode(prefilled?.packageId ? 'PACKAGE' : prefilled?.destinationId ? 'DESTINATION' : '');
     setTravelDate('');
     setTravelDurationDay('');
     setTravelDurationNight('');
-    setAdultCount('4');
+    setAdultCount('2');
     setChildCount('0');
     setSeniorCount('0');
-    setNoRoom('2');
+    setNoRoom('1');
     setVehicleCount('0');
     setBudgetMin('');
     setBudgetMax('');
     setVehicleType('ANY');
     setMealPlan('ANY');
+    setHotelCategory('');
+    setRoomType('');
     setMessage('');
     setSpecialRequirements('');
     setEnquiryType('CUSTOM_TOUR');
+    setStep(0);
+    setErrorMsg('');
   };
 
   const handleSubmit = async () => {
-    if (!name.trim() || !mobile.trim() || !destinationId) {
+    if (!contactIsValid || !selectionIsValid) {
       await showDialog({
         title: 'Required Fields Missing',
-        message: 'Please fill in your Name, Mobile Number, and Destination.',
-        variant: 'warning',
-      });
-      return;
-    }
-    if (mobile.trim().length < 10) {
-      await showDialog({
-        title: 'Invalid Mobile Number',
-        message: 'Please enter a valid 10-digit mobile number.',
+        message: !contactIsValid
+          ? 'Please enter your name and a valid mobile number.'
+          : 'Please choose a package or destination.',
         variant: 'warning',
       });
       return;
@@ -337,15 +376,22 @@ export const EnquiryScreen: React.FC<EnquiryScreenProps> = ({
         `Duration: ${resolvedTravelDurationDay} days / ${resolvedTravelDurationNight} nights`,
         `Travellers: Adults ${adultCount || 0}, Children ${childCount || 0}, Seniors ${seniorCount || 0}`,
         `Rooms: ${noRoom || 0}`,
+        `Hotel category: ${hotelCategoryOptions.find(option => option.value === hotelCategory)?.label || 'Not selected'}`,
+        `Room type: ${roomTypeOptions.find(option => option.value === roomType)?.label || 'Not selected'}`,
         `Vehicle type: ${vehicleType || 'ANY'}`,
         `Vehicles: ${vehicleCount || 0}`,
         `Budget: ${budgetMin || 0} - ${budgetMax || 0}`,
         `Meal plan: ${mealPlan || 'ANY'}`,
         `Special requirements: ${specialRequirements.trim() || 'None'}`,
         `Message / preferences: ${message.trim() || 'None'}`,
+        selectedVariant?.cover_image
+          ? `Package image: ${selectedVariant.cover_image}`
+          : (selectedPackage?.image || selectedPackage?.cover_image
+            ? `Package image: ${selectedPackage.image || selectedPackage.cover_image}`
+            : ''),
         '',
         'Please help me with availability, pricing and a personalized itinerary.',
-      ].join('\n');
+      ].filter(Boolean).join('\n');
       if (onEnquirySubmitted) onEnquirySubmitted({ channel: 'WHATSAPP', message: whatsappMessage });
 
       await showDialog({
@@ -365,6 +411,26 @@ export const EnquiryScreen: React.FC<EnquiryScreenProps> = ({
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const goNext = () => {
+    if (step === 0 && !contactIsValid) {
+      setErrorMsg(!name.trim() ? 'Enter your name to continue.' : 'Enter a valid mobile number to continue.');
+      return;
+    }
+    if (step === 1 && !selectionIsValid) {
+      setErrorMsg(variantsLoading
+        ? 'Please wait while package options load.'
+        : 'Choose a destination or select a package and variant to continue.');
+      return;
+    }
+    setErrorMsg('');
+    setStep(current => Math.min(current + 1, STEPS.length - 1));
+  };
+
+  const goPrevious = () => {
+    setErrorMsg('');
+    setStep(current => Math.max(current - 1, 0));
   };
 
   return (
@@ -402,329 +468,171 @@ export const EnquiryScreen: React.FC<EnquiryScreenProps> = ({
           </View>
         </View>
 
-        {/* Enquiry Type Selector */}
-        <Text style={styles.label}>ENQUIRY TYPE</Text>
-        <SearchableSelect
-          options={enquiryTypeOptions}
-          value={enquiryType}
-          onChange={setEnquiryType}
-          placeholder="Select enquiry type"
-          styles={styles}
-          colors={COLORS}
-          isDark={isDark}
-        />
-
-        {/* Full Name */}
-        <Text style={styles.label}>YOUR FULL NAME *</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="e.g. Rahul Sen"
-          placeholderTextColor={COLORS.textMuted}
-          value={name}
-          onChangeText={setName}
-          autoCapitalize="words"
-        />
-
-        {/* Mobile Number */}
-        <Text style={styles.label}>MOBILE NUMBER *</Text>
-        <View style={styles.inputRow}>
-          <View style={styles.dialCodeBox}>
-            <Text style={styles.dialCodeText}>🇮🇳 +91</Text>
+        <View style={styles.stepHeader}>
+          <Text style={styles.stepCount}>STEP {step + 1} OF {STEPS.length}</Text>
+          <Text style={styles.stepTitle}>{STEPS[step].title}</Text>
+          <Text style={styles.stepDescription}>{STEPS[step].description}</Text>
+          <View style={styles.progressTrack}>
+            <View style={[styles.progressFill, { width: `${((step + 1) / STEPS.length) * 100}%` }]} />
           </View>
-          <TextInput
-            style={[styles.input, styles.mobileInput]}
-            placeholder="10-digit number"
-            placeholderTextColor={COLORS.textMuted}
-            keyboardType="phone-pad"
-            value={mobile}
-            onChangeText={setMobile}
-            maxLength={10}
-          />
         </View>
 
-        <Text style={styles.label}>EMAIL (OPTIONAL)</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="you@example.com"
-          placeholderTextColor={COLORS.textMuted}
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
+        {step === 0 && <>
+          <Text style={styles.label}>YOUR FULL NAME *</Text>
+          <TextInput style={styles.input} placeholder="e.g. Rahul Sen" placeholderTextColor={COLORS.textMuted} value={name} onChangeText={setName} autoCapitalize="words" />
+          <Text style={styles.label}>MOBILE NUMBER *</Text>
+          <View style={styles.inputRow}>
+            <View style={styles.dialCodeBox}><Text style={styles.dialCodeText}>🇮🇳 +91</Text></View>
+            <TextInput style={[styles.input, styles.mobileInput]} placeholder="10-digit number" placeholderTextColor={COLORS.textMuted} keyboardType="phone-pad" value={mobile} onChangeText={setMobile} maxLength={10} />
+          </View>
+          <Text style={styles.label}>EMAIL (OPTIONAL)</Text>
+          <TextInput style={styles.input} placeholder="you@example.com" placeholderTextColor={COLORS.textMuted} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+        </>}
 
-        {/* Package or destination first */}
-        <Text style={styles.label}>CHOOSE PACKAGE OR DESTINATION *</Text>
-        <SearchableSelect
-          options={[{ label: 'Package', value: 'PACKAGE' }, { label: 'Destination', value: 'DESTINATION' }]}
-          value={selectionMode}
-          onChange={choice => {
-            setSelectionMode(choice as 'PACKAGE' | 'DESTINATION');
-            setPackageId('');
-            setVariantId('');
-            setDestinationId('');
-            setDestination('');
-          }}
-          placeholder="Choose package or destination"
-          styles={styles}
-          colors={COLORS}
-          isDark={isDark}
-        />
-        {selectionMode === 'PACKAGE' ? <>
-        <Text style={styles.label}>PACKAGE</Text>
-        <SearchableSelect
-          options={packages.map(item => ({ label: item.title || item.destination || 'Tour package', value: item.id }))}
-          value={packageId}
-          onChange={value => {
-            const item = packages.find(entry => entry.id === value);
-            setPackageId(value);
-            setVariantId('');
-            setDestinationId(item?.destination_id || '');
-            setDestination(item?.destination || item?.destination_name || '');
-          }}
-          placeholder="Search and select a package"
-          styles={styles}
-          colors={COLORS}
-          isDark={isDark}
-        />
-        {variants.length > 0 ? <>
-          <Text style={styles.label}>TOUR VARIANT (OPTIONAL)</Text>
+        {step === 1 && <>
+          <Text style={styles.label}>CHOOSE PACKAGE OR DESTINATION *</Text>
           <SearchableSelect
-            options={variants.map(item => ({label: item.name || item.season_name || 'Tour variant', value: item.id}))}
-            value={variantId}
-            onChange={value => {
-              setVariantId(value);
+            options={[{ label: 'Choose a destination', value: 'DESTINATION' }, { label: 'Choose a tour package', value: 'PACKAGE' }]}
+            value={selectionMode}
+            onChange={choice => {
+              setSelectionMode(choice as 'PACKAGE' | 'DESTINATION');
+              setPackageId('');
+              setVariantId('');
+              setDestinationId('');
+              setDestination('');
               setTravelDate('');
+              setErrorMsg('');
             }}
-            placeholder="Search and select a tour variant"
+            placeholder="Choose package or destination"
             styles={styles}
             colors={COLORS}
             isDark={isDark}
           />
-        </> : null}
-        </> : null}
-        {selectionMode === 'DESTINATION' ? <>
-        <Text style={styles.label}>DESTINATION</Text>
-        <SearchableSelect
-          options={destinations.map(item => ({label: item.name || item.destination_name || 'Destination', value: item.id}))}
-          value={destinationId}
-          onChange={value => {
-            const item = destinations.find(entry => entry.id === value);
-            setDestinationId(value);
-            setDestination(item?.name || item?.destination_name || '');
-          }}
-          placeholder="Search and select a destination"
-          styles={styles}
-          colors={COLORS}
-          isDark={isDark}
-        />
-        </> : null}
-
-        {/* Travel Date & Duration */}
-        <Text style={styles.label}>TRAVEL DATE</Text>
-        <SearchableSelect
-          options={departureDateOptions.length ? departureDateOptions : [{ label: 'Choose a package variant first', value: '' }]}
-          value={travelDate}
-          onChange={setTravelDate}
-          placeholder="Select departure date"
-          styles={styles}
-          colors={COLORS}
-          isDark={isDark}
-        />
-        <View style={styles.row}>
-          <View style={styles.col}>
-            <Text style={styles.label}>DAYS</Text>
-            <TextInput
-              style={[styles.input, isPackageEnquiry && styles.readOnlyInput]}
-              placeholder="0"
-              placeholderTextColor={COLORS.textMuted}
-              keyboardType="numeric"
-              value={String(resolvedTravelDurationDay)}
-              onChangeText={setTravelDurationDay}
-              editable={!isPackageEnquiry}
-              selectTextOnFocus={!isPackageEnquiry}
-              accessibilityLabel={isPackageEnquiry ? 'Package duration in days, read only' : 'Travel duration in days'}
+          {selectionMode === 'PACKAGE' && <>
+            <Text style={styles.label}>PACKAGE</Text>
+            <SearchableSelect
+              options={packages.map(item => ({ label: item.title || item.destination || 'Tour package', value: item.id }))}
+              value={packageId}
+              onChange={value => {
+                const item = packages.find(entry => entry.id === value);
+                setPackageId(value);
+                setVariantId('');
+                setDestinationId(item?.destination_id || '');
+                setDestination(item?.destination || item?.destination_name || '');
+                setTravelDate('');
+              }}
+              placeholder="Search and select a package"
+              styles={styles}
+              colors={COLORS}
+              isDark={isDark}
             />
-          </View>
-          <View style={styles.col}>
-            <Text style={styles.label}>NIGHTS</Text>
-            <TextInput
-              style={[styles.input, isPackageEnquiry && styles.readOnlyInput]}
-              placeholder="0"
-              placeholderTextColor={COLORS.textMuted}
-              keyboardType="numeric"
-              value={String(resolvedTravelDurationNight)}
-              onChangeText={setTravelDurationNight}
-              editable={!isPackageEnquiry}
-              selectTextOnFocus={!isPackageEnquiry}
-              accessibilityLabel={isPackageEnquiry ? 'Package duration in nights, read only' : 'Travel duration in nights'}
+            {variantsLoading ? <Text style={styles.helperText}>Loading package variants…</Text> : null}
+            {variantsError ? <Text style={styles.errorMessage}>{variantsError}</Text> : null}
+            {!variantsLoading && variants.length > 0 && <>
+              <Text style={styles.label}>TOUR VARIANT</Text>
+              <SearchableSelect
+                options={variants.map(item => ({ label: item.name || item.season_name || 'Tour variant', value: item.id }))}
+                value={selectedVariant?.id || ''}
+                onChange={value => {
+                  setVariantId(value);
+                  setTravelDate('');
+                  setErrorMsg('');
+                }}
+                placeholder="Search and select a tour variant"
+                styles={styles}
+                colors={COLORS}
+                isDark={isDark}
+              />
+            </>}
+          </>}
+          {selectionMode === 'DESTINATION' && <>
+            <Text style={styles.label}>DESTINATION</Text>
+            <SearchableSelect
+              options={destinations.map(item => ({ label: item.name || item.destination_name || 'Destination', value: item.id }))}
+              value={destinationId}
+              onChange={value => {
+                const item = destinations.find(entry => entry.id === value);
+                setDestinationId(value);
+                setDestination(item?.name || item?.destination_name || '');
+                setErrorMsg('');
+              }}
+              placeholder="Search and select a destination"
+              styles={styles}
+              colors={COLORS}
+              isDark={isDark}
             />
-          </View>
-        </View>
+          </>}
+        </>}
 
-        {/* Traveller and room counts */}
-        <View style={styles.row}>
-          <View style={styles.col}>
-            <Text style={styles.label}>ADULTS</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="0"
-              placeholderTextColor={COLORS.textMuted}
-              keyboardType="numeric"
-              value={adultCount}
-              onChangeText={setAdultCount}
-            />
-          </View>
-          <View style={styles.col}>
-            <Text style={styles.label}>CHILDREN</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="0"
-              placeholderTextColor={COLORS.textMuted}
-              keyboardType="numeric"
-              value={childCount}
-              onChangeText={setChildCount}
-            />
-          </View>
-        </View>
-        <View style={styles.row}>
-          <View style={styles.col}>
-            <Text style={styles.label}>SENIORS</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="0"
-              placeholderTextColor={COLORS.textMuted}
-              keyboardType="numeric"
-              value={seniorCount}
-              onChangeText={setSeniorCount}
-            />
-          </View>
-          <View style={styles.col}>
-            <Text style={styles.label}>ROOMS</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="0"
-              placeholderTextColor={COLORS.textMuted}
-              keyboardType="numeric"
-              value={noRoom}
-              onChangeText={setNoRoom}
-            />
-          </View>
-        </View>
-        <Text style={styles.label}>VEHICLES</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="0"
-          placeholderTextColor={COLORS.textMuted}
-          keyboardType="numeric"
-          value={vehicleCount}
-          onChangeText={setVehicleCount}
-        />
-
-        {/* Preferred Vehicle */}
-        <Text style={styles.label}>VEHICLE TYPE</Text>
-        <SearchableSelect
-          options={[{ label: 'Any / Not Sure', value: 'ANY' }, ...vehicleOptions]}
-          value={vehicleType}
-          onChange={setVehicleType}
-          placeholder="Search and select a vehicle type"
-          styles={styles}
-          colors={COLORS}
-          isDark={isDark}
-        />
-
-        <View style={styles.row}>
-          <View style={styles.col}>
-            <Text style={styles.label}>MINIMUM BUDGET</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="0"
-              placeholderTextColor={COLORS.textMuted}
-              keyboardType="numeric"
-              value={budgetMin}
-              onChangeText={setBudgetMin}
-            />
-          </View>
-          <View style={styles.col}>
-            <Text style={styles.label}>MAXIMUM BUDGET</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="0"
-              placeholderTextColor={COLORS.textMuted}
-              keyboardType="numeric"
-              value={budgetMax}
-              onChangeText={setBudgetMax}
-            />
-          </View>
-        </View>
-
-        {/* Meal Plan */}
-        <Text style={styles.label}>MEAL PLAN</Text>
-        <SearchableSelect
-          options={[{ label: 'Any Plan', value: 'ANY' }, ...mealOptions]}
-          value={mealPlan}
-          onChange={setMealPlan}
-          placeholder="Search and select a meal plan"
-          styles={styles}
-          colors={COLORS}
-          isDark={isDark}
-        />
-
-        <Text style={styles.label}>MESSAGE (OPTIONAL)</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="Add a message for our travel team"
-          placeholderTextColor={COLORS.textMuted}
-          multiline
-          numberOfLines={4}
-          textAlignVertical="top"
-          value={message}
-          onChangeText={setMessage}
-        />
-
-        {/* Special Requirements */}
-        <Text style={styles.label}>SPECIAL REQUIREMENTS (OPTIONAL)</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="e.g. Honeymoon setup, pure veg meals, senior citizen friendly, airport transfers..."
-          placeholderTextColor={COLORS.textMuted}
-          multiline
-          numberOfLines={4}
-          textAlignVertical="top"
-          value={specialRequirements}
-          onChangeText={setSpecialRequirements}
-        />
-
-        {/* Trust Note */}
-        <View style={styles.trustNote}>
-          <Text style={styles.trustIcon}>✨</Text>
-          <Text style={styles.trustText}>
-            Our experienced travel experts will reach out to you within 24 hours with a tailored itinerary and transparent quotation.
-          </Text>
-        </View>
-
-        {/* Submit button */}
-        <Pressable
-          onPress={handleSubmit}
-          disabled={isSubmitting}
-          style={({ pressed }) => [
-            styles.submitBtn,
-            isSubmitting && styles.submitBtnDisabled,
-            pressed && !isSubmitting && styles.submitBtnPressed,
-          ]}
-        >
-          {isSubmitting ? (
-            <ActivityIndicator color="#FFFFFF" size="small" />
+        {step === 2 && <>
+          <Text style={styles.label}>PREFERRED DEPARTURE DATE</Text>
+          {variantsLoading ? (
+            <Text style={styles.helperText}>Loading package dates…</Text>
+          ) : departureDateOptions.length > 0 ? (
+            <SearchableSelect options={departureDateOptions} value={travelDate} onChange={setTravelDate} placeholder="Select departure date" styles={styles} colors={COLORS} isDark={isDark} />
           ) : (
-            <>
-              <Text style={styles.submitBtnText}>Submit Custom Enquiry</Text>
-              <Text style={styles.submitBtnArrow}>→</Text>
-            </>
+            <CustomDateField value={travelDate} onChange={setTravelDate} placeholder="Choose a departure date" title="Choose departure date" />
           )}
-        </Pressable>
+          <View style={styles.row}>
+            <View style={styles.col}>
+              <Text style={styles.label}>DAYS</Text>
+              <TextInput style={[styles.input, isPackageEnquiry && styles.readOnlyInput]} keyboardType="numeric" value={String(resolvedTravelDurationDay)} onChangeText={setTravelDurationDay} editable={!isPackageEnquiry} selectTextOnFocus={!isPackageEnquiry} />
+            </View>
+            <View style={styles.col}>
+              <Text style={styles.label}>NIGHTS</Text>
+              <TextInput style={[styles.input, isPackageEnquiry && styles.readOnlyInput]} keyboardType="numeric" value={String(resolvedTravelDurationNight)} onChangeText={setTravelDurationNight} editable={!isPackageEnquiry} selectTextOnFocus={!isPackageEnquiry} />
+            </View>
+          </View>
+          <View style={styles.row}>
+            <View style={styles.col}><Text style={styles.label}>ADULTS</Text><TextInput style={styles.input} keyboardType="numeric" value={adultCount} onChangeText={setAdultCount} /></View>
+            <View style={styles.col}><Text style={styles.label}>CHILDREN</Text><TextInput style={styles.input} keyboardType="numeric" value={childCount} onChangeText={setChildCount} /></View>
+            <View style={styles.col}><Text style={styles.label}>SENIORS</Text><TextInput style={styles.input} keyboardType="numeric" value={seniorCount} onChangeText={setSeniorCount} /></View>
+          </View>
+        </>}
 
-        <View style={styles.bottomSpacer} />
+        {step === 3 && <>
+          <Text style={styles.label}>ENQUIRY TYPE</Text>
+          <SearchableSelect options={enquiryTypeOptions} value={enquiryType} onChange={setEnquiryType} placeholder="Select enquiry type" styles={styles} colors={COLORS} isDark={isDark} />
+          <View style={styles.row}>
+            <View style={styles.col}><Text style={styles.label}>ROOMS</Text><TextInput style={styles.input} keyboardType="numeric" value={noRoom} onChangeText={setNoRoom} /></View>
+            <View style={styles.col}><Text style={styles.label}>VEHICLES</Text><TextInput style={styles.input} keyboardType="numeric" value={vehicleCount} onChangeText={setVehicleCount} /></View>
+          </View>
+          <Text style={styles.label}>HOTEL CATEGORY</Text>
+          <SearchableSelect options={hotelCategoryOptions} value={hotelCategory} onChange={setHotelCategory} placeholder="Select hotel category" styles={styles} colors={COLORS} isDark={isDark} />
+          <Text style={styles.label}>ROOM TYPE</Text>
+          <SearchableSelect options={roomTypeOptions} value={roomType} onChange={setRoomType} placeholder="Select room type" styles={styles} colors={COLORS} isDark={isDark} />
+          <Text style={styles.label}>VEHICLE TYPE</Text>
+          <SearchableSelect options={[{ label: 'Any / Not Sure', value: 'ANY' }, ...vehicleOptions]} value={vehicleType} onChange={setVehicleType} placeholder="Search and select a vehicle type" styles={styles} colors={COLORS} isDark={isDark} />
+          <View style={styles.row}>
+            <View style={styles.col}><Text style={styles.label}>MINIMUM BUDGET</Text><TextInput style={styles.input} keyboardType="numeric" value={budgetMin} onChangeText={setBudgetMin} /></View>
+            <View style={styles.col}><Text style={styles.label}>MAXIMUM BUDGET</Text><TextInput style={styles.input} keyboardType="numeric" value={budgetMax} onChangeText={setBudgetMax} /></View>
+          </View>
+          <Text style={styles.label}>MEAL PLAN</Text>
+          <SearchableSelect options={[{ label: 'Any Plan', value: 'ANY' }, ...mealOptions]} value={mealPlan} onChange={setMealPlan} placeholder="Search and select a meal plan" styles={styles} colors={COLORS} isDark={isDark} />
+          <Text style={styles.label}>SPECIAL REQUIREMENTS</Text>
+          <TextInput style={[styles.input, styles.textArea]} placeholder="Dietary needs, pickup requests, or other preferences" placeholderTextColor={COLORS.textMuted} multiline value={specialRequirements} onChangeText={setSpecialRequirements} />
+          <Text style={styles.label}>TRAVEL PLANS / PREFERENCES</Text>
+          <TextInput style={[styles.input, styles.textArea]} placeholder="Tell us about your plans for the trip" placeholderTextColor={COLORS.textMuted} multiline value={message} onChangeText={setMessage} />
+          <View style={styles.trustNote}>
+            <Text style={styles.trustIcon}>✨</Text>
+            <Text style={styles.trustText}>Our experienced travel experts will reach out with a tailored itinerary and quotation.</Text>
+          </View>
+        </>}
+
+        {errorMsg ? <Text style={styles.errorMessage}>{errorMsg}</Text> : null}
       </ScrollView>
+      <View style={styles.stepFooter}>
+        <Pressable onPress={step === 0 ? onBack : goPrevious} style={styles.stepBackButton}>
+          <Text style={styles.stepBackText}>{step === 0 ? 'Cancel' : 'Back'}</Text>
+        </Pressable>
+        <Pressable
+          onPress={step < STEPS.length - 1 ? goNext : handleSubmit}
+          disabled={isSubmitting}
+          style={({ pressed }) => [styles.submitBtn, styles.stepContinueButton, isSubmitting && styles.submitBtnDisabled, pressed && !isSubmitting && styles.submitBtnPressed]}
+        >
+          {isSubmitting ? <ActivityIndicator color="#FFFFFF" size="small" /> : <Text style={styles.submitBtnText}>{step < STEPS.length - 1 ? 'Continue' : 'Prepare WhatsApp enquiry'}</Text>}
+        </Pressable>
+      </View>
     </View>
   );
 };
@@ -787,6 +695,39 @@ const makeStyles = (COLORS: ReturnType<typeof useTheme>['colors'], isDark: boole
       shadowOpacity: isDark ? 0.2 : 0.05,
       shadowRadius: 6,
       shadowOffset: { width: 0, height: 2 },
+    },
+    stepHeader: {
+      paddingVertical: 8,
+      marginBottom: 8,
+    },
+    stepCount: {
+      color: COLORS.primary,
+      fontSize: 10,
+      fontWeight: '900',
+      letterSpacing: 1,
+    },
+    stepTitle: {
+      color: COLORS.text,
+      fontSize: 20,
+      fontWeight: '900',
+      marginTop: 4,
+    },
+    stepDescription: {
+      color: COLORS.textMuted,
+      fontSize: 12,
+      marginTop: 3,
+      marginBottom: 12,
+    },
+    progressTrack: {
+      height: 5,
+      borderRadius: 4,
+      overflow: 'hidden',
+      backgroundColor: COLORS.surface,
+    },
+    progressFill: {
+      height: '100%',
+      borderRadius: 4,
+      backgroundColor: COLORS.primary,
     },
     headerIconContainer: {
       width: 48,
@@ -916,6 +857,20 @@ const makeStyles = (COLORS: ReturnType<typeof useTheme>['colors'], isDark: boole
       textAlign: 'center',
       paddingVertical: 24,
     },
+    helperText: {
+      color: COLORS.textMuted,
+      fontSize: 12,
+      marginTop: 8,
+    },
+    errorMessage: {
+      color: COLORS.danger,
+      backgroundColor: isDark ? 'rgba(239, 68, 68, 0.12)' : '#FEF2F2',
+      borderRadius: 10,
+      padding: 12,
+      marginTop: 14,
+      fontSize: 12,
+      fontWeight: '700',
+    },
     inputRow: {
       flexDirection: 'row',
       gap: 8,
@@ -987,6 +942,37 @@ const makeStyles = (COLORS: ReturnType<typeof useTheme>['colors'], isDark: boole
       shadowOpacity: 0.3,
       shadowRadius: 8,
       shadowOffset: { width: 0, height: 4 },
+    },
+    stepFooter: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      paddingHorizontal: 16,
+      paddingTop: 12,
+      paddingBottom: 14,
+      borderTopWidth: 1,
+      borderTopColor: COLORS.border,
+      backgroundColor: COLORS.card,
+    },
+    stepBackButton: {
+      minHeight: 48,
+      minWidth: 82,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      borderRadius: 12,
+      paddingHorizontal: 16,
+    },
+    stepBackText: {
+      color: COLORS.textSecondary,
+      fontSize: 14,
+      fontWeight: '800',
+    },
+    stepContinueButton: {
+      flex: 1,
+      minHeight: 48,
+      marginTop: 0,
     },
     submitBtnDisabled: {
       opacity: 0.65,

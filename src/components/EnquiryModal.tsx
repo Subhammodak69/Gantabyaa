@@ -11,12 +11,13 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Feather from 'react-native-vector-icons/Feather';
 import { useColors } from '../theme/theme';
 import { useAppDialog } from './AppDialog';
 import {
   getAccessToken,
   fetchTourPackageVariants,
-  fetchTourVariant,
   fetchMe,
   AuthUser,
   openWhatsAppChat,
@@ -29,6 +30,32 @@ const isValidUUID = (val?: string) => typeof val === 'string' && UUID_REGEX.test
 const vehicleTypeOptions = [
   { label: 'Any / Not Sure', value: 'ANY' },
   ...Object.values(enums.VehicleType || {}).map(value => ({ label: String(value), value: String(value) })),
+];
+const hotelCategoryOptions = [
+  { label: 'Budget', value: 'BUDGET' },
+  { label: 'Standard', value: 'STANDARD' },
+  { label: 'Deluxe', value: 'DELUXE' },
+  { label: 'Luxury', value: 'LUXURY' },
+];
+const roomTypeOptions = [
+  { label: 'Single', value: 'SINGLE' },
+  { label: 'Double', value: 'DOUBLE' },
+  { label: 'Twin', value: 'TWIN' },
+  { label: 'Triple', value: 'TRIPLE' },
+  { label: 'Family', value: 'FAMILY' },
+  { label: 'Suite', value: 'SUITE' },
+  { label: 'Deluxe', value: 'DELUXE' },
+  { label: 'Executive', value: 'EXECUTIVE' },
+  { label: 'Presidential', value: 'PRESIDENTIAL' },
+];
+const mealPlanOptions = [
+  { label: 'Any plan', value: 'ANY' },
+  ...Object.values(enums.MealPlan || {}).map(value => ({ label: String(value), value: String(value) })),
+];
+const STEPS = [
+  { title: 'Contact details', description: 'Who should we contact?' },
+  { title: 'Travel plans', description: 'Dates and travellers' },
+  { title: 'Preferences', description: 'Stay, transport and budget' },
 ];
 
 const departureDateLabel = (value: string) => {
@@ -88,6 +115,7 @@ export const EnquiryModal: React.FC<EnquiryModalProps> = ({
   user: initialUser,
 }) => {
   const COLORS = useColors();
+  const insets = useSafeAreaInsets();
   const styles = makeStyles(COLORS);
   const { showDialog } = useAppDialog();
   const [name, setName] = useState('');
@@ -95,8 +123,20 @@ export const EnquiryModal: React.FC<EnquiryModalProps> = ({
   const [email, setEmail] = useState('');
   const [selectedTravelDate, setSelectedTravelDate] = useState(travelDate);
   const [vehicleType, setVehicleType] = useState('ANY');
+  const [adultCount, setAdultCount] = useState('1');
+  const [childCount, setChildCount] = useState('0');
+  const [seniorCount, setSeniorCount] = useState('0');
+  const [roomCount, setRoomCount] = useState('0');
+  const [vehicleCount, setVehicleCount] = useState('0');
+  const [budgetMin, setBudgetMin] = useState('');
+  const [budgetMax, setBudgetMax] = useState('');
+  const [hotelCategory, setHotelCategory] = useState('');
+  const [roomType, setRoomType] = useState('');
+  const [mealPlan, setMealPlan] = useState('ANY');
+  const [specialRequirements, setSpecialRequirements] = useState('');
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
+  const [step, setStep] = useState(0);
 
   // Variants loaded from /api/v1/tour-packages/{tour_slug}/variants
   const [variants, setVariants] = useState<any[]>([]);
@@ -105,6 +145,8 @@ export const EnquiryModal: React.FC<EnquiryModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const selectedVariant = variants.find(item => item.id === selectedVariantId)
     || (selectedVariantId ? { id: selectedVariantId, dates: departureDates } : undefined);
+  const travelDurationDay = Number(selectedVariant?.duration_days || tour?.duration_days || 0);
+  const travelDurationNight = Number(selectedVariant?.duration_nights || tour?.duration_nights || 0);
   const departureDateOptions = (selectedVariant?.dates || [])
     .filter((item: any) => item.date || item.departure_date)
     .map((item: any) => {
@@ -118,6 +160,7 @@ export const EnquiryModal: React.FC<EnquiryModalProps> = ({
   useEffect(() => {
     if (!visible) return;
     setSelectedTravelDate(travelDate || '');
+    setStep(0);
 
     // 1. Pre-fill user profile information when available.
     (async () => {
@@ -186,29 +229,27 @@ export const EnquiryModal: React.FC<EnquiryModalProps> = ({
     setEmail('');
     setSelectedTravelDate('');
     setVehicleType('ANY');
+    setAdultCount('1');
+    setChildCount('0');
+    setSeniorCount('0');
+    setRoomCount('0');
+    setVehicleCount('0');
+    setBudgetMin('');
+    setBudgetMax('');
+    setHotelCategory('');
+    setRoomType('');
+    setMealPlan('ANY');
+    setSpecialRequirements('');
     setSubject('');
     setMessage('');
     setVariants([]);
     setSelectedVariantId('');
+    setStep(0);
   };
 
   const handleClose = () => {
     resetForm();
     onClose();
-  };
-
-  const handleVariantChange = async (variant: any) => {
-    setSelectedVariantId(variant.id);
-    setSelectedTravelDate('');
-    const lookupKey = tour?.slug || (packageId && !isValidUUID(packageId) ? packageId : '');
-    if (!lookupKey || variant.dates?.length) return;
-
-    try {
-      const result = await fetchTourVariant(lookupKey, variant.key || variant.id, variants);
-      setVariants(current => current.map(item => item.id === variant.id || item.id === result.variant.id ? result.variant : item));
-    } catch {
-      // Keep the selected variant available if its details request fails.
-    }
   };
 
   const handleSubmit = async () => {
@@ -249,9 +290,18 @@ export const EnquiryModal: React.FC<EnquiryModalProps> = ({
         `Full name: ${name.trim()}`,
         `Mobile / WhatsApp: ${mobile.trim()}`,
         `Email: ${email.trim() || 'Not provided'}`,
+        `Travellers: Adults ${adultCount || 0}, Children ${childCount || 0}, Seniors ${seniorCount || 0}`,
+        `Travel duration: ${travelDurationDay} days / ${travelDurationNight} nights`,
+        `Rooms: ${roomCount || 0}`,
+        `Hotel category: ${hotelCategoryOptions.find(option => option.value === hotelCategory)?.label || 'Not selected'}`,
+        `Room type: ${roomTypeOptions.find(option => option.value === roomType)?.label || 'Not selected'}`,
         `Vehicle type: ${vehicleType || 'ANY'}`,
+        `Vehicles: ${vehicleCount || 0}`,
+        `Budget: ${budgetMin || 0} - ${budgetMax || 0}`,
+        `Meal plan: ${mealPlan || 'ANY'}`,
         `Subject: ${subject.trim() || 'Not provided'}`,
-        `Message / requirements: ${message.trim() || 'None'}`,
+        `Special requirements: ${specialRequirements.trim() || 'None'}`,
+        `Travel plans / preferences: ${message.trim() || 'None'}`,
         imageUrl ? `Package banner: ${imageUrl}` : '',
         '',
         'Please share availability, pricing and booking details.',
@@ -276,34 +326,46 @@ export const EnquiryModal: React.FC<EnquiryModalProps> = ({
     }
   };
 
+  const goNext = async () => {
+    if (step === 0 && (!name.trim() || !mobile.trim() || mobile.trim().length < 10)) {
+      await showDialog({
+        title: !name.trim() ? 'Name Required' : 'Mobile Required',
+        message: !name.trim() ? 'Please enter your full name.' : 'Please enter a valid 10-digit mobile number.',
+        variant: 'warning',
+      });
+      return;
+    }
+    setStep(current => Math.min(current + 1, STEPS.length - 1));
+  };
+
+  const goPrevious = () => setStep(current => Math.max(current - 1, 0));
+
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
+    <Modal visible={visible} animationType="slide" transparent={false} presentationStyle="fullScreen" onRequestClose={handleClose}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={0}
         style={styles.keyboardAvoid}
       >
-        <Pressable style={styles.backdrop} onPress={handleClose} />
         <View style={styles.sheet}>
-          {/* Handle bar */}
-          <View style={styles.handleBar} />
-
-          {/* Header */}
-          <View style={styles.header}>
+          <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
+            <Pressable
+              onPress={handleClose}
+              style={styles.backBtn}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+            >
+              <Feather name="arrow-left" size={20} color={COLORS.text} />
+            </Pressable>
             <View style={styles.headerLeft}>
-              <View style={styles.headerIcon}>
-                <Text style={styles.headerIconText}>✉️</Text>
-              </View>
               <View>
-                <Text style={styles.headerTitle}>Send Enquiry</Text>
+                <Text style={styles.headerTitle}>Holiday enquiry</Text>
                 <Text style={styles.headerSub} numberOfLines={1}>
                   {tour?.title || 'Get in touch with our team'}
                 </Text>
               </View>
             </View>
-            <Pressable onPress={handleClose} style={styles.closeBtn} hitSlop={8}>
-              <Text style={styles.closeBtnText}>✕</Text>
-            </Pressable>
           </View>
 
           {/* Tour info chip */}
@@ -318,154 +380,180 @@ export const EnquiryModal: React.FC<EnquiryModalProps> = ({
             </View>
           )}
 
+          <View style={styles.progressContainer}>
+            <View style={styles.progressCopy}>
+              <Text style={styles.progressStep}>STEP {step + 1} OF {STEPS.length}</Text>
+              <Text style={styles.progressTitle}>{STEPS[step].title}</Text>
+              <Text style={styles.progressDescription}>{STEPS[step].description}</Text>
+            </View>
+            <View style={styles.progressTrack}>
+              <View style={[styles.progressFill, { width: `${((step + 1) / STEPS.length) * 100}%` }]} />
+            </View>
+          </View>
+
           <ScrollView
             style={styles.formScroll}
             contentContainerStyle={styles.formContent}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-            {/* Package variants loaded from the slug-based variants endpoint */}
-            {loadingSelect ? (
-              <View style={styles.loadingVariantsRow}>
-                <ActivityIndicator size="small" color={COLORS.primary} />
-                <Text style={styles.loadingVariantsText}>Loading package options…</Text>
-              </View>
-            ) : variants.length > 0 ? (
-              <View style={styles.sectionBlock}>
-                <Text style={styles.label}>SELECT TOUR OPTION / VARIANT</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
-                  {variants.map((v) => {
-                    const isSelected = selectedVariantId === v.id;
-                    return (
-                      <Pressable
-                        key={v.id}
-                        onPress={() => {
-                          handleVariantChange(v);
-                        }}
-                        style={[styles.chip, isSelected && styles.chipActive]}
-                      >
-                        <Text style={[styles.chipText, isSelected && styles.chipTextActive]}>
-                          {v.name || v.season_name}
-                        </Text>
-                        {v.season_name && v.name !== v.season_name && (
-                          <Text style={[styles.chipSub, isSelected && styles.chipSubActive]}>
-                            {v.season_name}
-                          </Text>
-                        )}
-                      </Pressable>
-                    );
-                  })}
-                </ScrollView>
-              </View>
-            ) : null}
-
-            {/* Vehicle preference */}
-            <View style={styles.sectionBlock}>
-              <Text style={styles.label}>VEHICLE TYPE</Text>
-              <ChipSelector
-                options={vehicleTypeOptions}
-                value={vehicleType}
-                onChange={setVehicleType}
-                styles={styles}
-              />
-            </View>
-
-            {/* Name */}
-            <Text style={styles.label}>YOUR NAME *</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. Rahul Sen"
-              placeholderTextColor={COLORS.textMuted}
-              value={name}
-              onChangeText={setName}
-              autoCapitalize="words"
-              returnKeyType="next"
-            />
-
-            {/* Mobile */}
-            <Text style={styles.label}>MOBILE NUMBER *</Text>
-            <View style={styles.inputRow}>
-              <View style={styles.dialCodeBox}>
-                <Text style={styles.dialCodeText}>🇮🇳 +91</Text>
-              </View>
-              <TextInput
-                style={[styles.input, styles.mobileInput]}
-                placeholder="10-digit number"
-                placeholderTextColor={COLORS.textMuted}
-                keyboardType="phone-pad"
-                value={mobile}
-                onChangeText={setMobile}
-                maxLength={10}
-                returnKeyType="next"
-              />
-            </View>
-
-            {/* Subject */}
-            <Text style={styles.label}>SUBJECT</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. Group booking enquiry"
-              placeholderTextColor={COLORS.textMuted}
-              value={subject}
-              onChangeText={setSubject}
-              returnKeyType="next"
-            />
-
-            <Text style={styles.label}>DEPARTURE DATE</Text>
-            {departureDateOptions.length > 0 ? (
-              <ChipSelector
-                options={departureDateOptions}
-                value={selectedTravelDate}
-                onChange={setSelectedTravelDate}
-                styles={styles}
-              />
-            ) : (
-              <Text style={styles.loadingVariantsText}>Select a tour variant to see departure dates.</Text>
+            {step === 0 && (
+              <>
+                <Text style={styles.label}>YOUR NAME *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g. Rahul Sen"
+                  placeholderTextColor={COLORS.textMuted}
+                  value={name}
+                  onChangeText={setName}
+                  autoCapitalize="words"
+                  returnKeyType="next"
+                />
+                <Text style={styles.label}>MOBILE NUMBER *</Text>
+                <View style={styles.inputRow}>
+                  <View style={styles.dialCodeBox}>
+                    <Text style={styles.dialCodeText}>🇮🇳 +91</Text>
+                  </View>
+                  <TextInput
+                    style={[styles.input, styles.mobileInput]}
+                    placeholder="10-digit number"
+                    placeholderTextColor={COLORS.textMuted}
+                    keyboardType="phone-pad"
+                    value={mobile}
+                    onChangeText={setMobile}
+                    maxLength={10}
+                    returnKeyType="next"
+                  />
+                </View>
+                <Text style={styles.label}>EMAIL (OPTIONAL)</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="you@example.com"
+                  placeholderTextColor={COLORS.textMuted}
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              </>
             )}
 
-            {/* Message */}
-            <Text style={styles.label}>MESSAGE / REQUIREMENTS</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              placeholder="Tell us travel dates, number of guests, special requests…"
-              placeholderTextColor={COLORS.textMuted}
-              multiline
-              numberOfLines={3}
-              textAlignVertical="top"
-              value={message}
-              onChangeText={setMessage}
-            />
+            {step === 1 && (
+              <>
+                <Text style={styles.label}>DEPARTURE DATE</Text>
+                {loadingSelect ? (
+                  <View style={styles.loadingVariantsRow}>
+                    <ActivityIndicator size="small" color={COLORS.primary} />
+                    <Text style={styles.loadingVariantsText}>Loading package details…</Text>
+                  </View>
+                ) : departureDateOptions.length > 0 ? (
+                  <ChipSelector options={departureDateOptions} value={selectedTravelDate} onChange={setSelectedTravelDate} styles={styles} />
+                ) : (
+                  <Text style={styles.loadingVariantsText}>No departure dates are listed for this package.</Text>
+                )}
+                <View style={styles.row}>
+                  <View style={styles.col}>
+                    <Text style={styles.label}>TRAVEL DURATION (DAYS)</Text>
+                    <Text style={styles.readOnlyValue}>{travelDurationDay}</Text>
+                  </View>
+                  <View style={styles.col}>
+                    <Text style={styles.label}>TRAVEL DURATION (NIGHTS)</Text>
+                    <Text style={styles.readOnlyValue}>{travelDurationNight}</Text>
+                  </View>
+                </View>
+                <View style={styles.row}>
+                  <View style={styles.col}>
+                    <Text style={styles.label}>ADULTS</Text>
+                    <TextInput style={styles.input} keyboardType="numeric" value={adultCount} onChangeText={setAdultCount} />
+                  </View>
+                  <View style={styles.col}>
+                    <Text style={styles.label}>CHILDREN</Text>
+                    <TextInput style={styles.input} keyboardType="numeric" value={childCount} onChangeText={setChildCount} />
+                  </View>
+                  <View style={styles.col}>
+                    <Text style={styles.label}>SENIORS</Text>
+                    <TextInput style={styles.input} keyboardType="numeric" value={seniorCount} onChangeText={setSeniorCount} />
+                  </View>
+                </View>
+              </>
+            )}
 
-            {/* Trust reassurance */}
-            <View style={styles.trustBox}>
-              <Text style={styles.trustIcon}>🔒</Text>
-              <Text style={styles.trustText}>
-                Your details are safe. We will only contact you regarding this tour request.
-              </Text>
-            </View>
-
-            {/* Submit button */}
+            {step === 2 && (
+              <>
+                <View style={styles.row}>
+                  <View style={styles.col}>
+                    <Text style={styles.label}>ROOMS</Text>
+                    <TextInput style={styles.input} keyboardType="numeric" value={roomCount} onChangeText={setRoomCount} />
+                  </View>
+                  <View style={styles.col}>
+                    <Text style={styles.label}>VEHICLES</Text>
+                    <TextInput style={styles.input} keyboardType="numeric" value={vehicleCount} onChangeText={setVehicleCount} />
+                  </View>
+                </View>
+                <Text style={styles.label}>HOTEL CATEGORY</Text>
+                <ChipSelector options={hotelCategoryOptions} value={hotelCategory} onChange={setHotelCategory} styles={styles} />
+                <Text style={styles.label}>ROOM TYPE</Text>
+                <ChipSelector options={roomTypeOptions} value={roomType} onChange={setRoomType} styles={styles} />
+                <Text style={styles.label}>VEHICLE TYPE</Text>
+                <ChipSelector options={vehicleTypeOptions} value={vehicleType} onChange={setVehicleType} styles={styles} />
+                <View style={styles.row}>
+                  <View style={styles.col}>
+                    <Text style={styles.label}>MINIMUM BUDGET</Text>
+                    <TextInput style={styles.input} keyboardType="numeric" value={budgetMin} onChangeText={setBudgetMin} />
+                  </View>
+                  <View style={styles.col}>
+                    <Text style={styles.label}>MAXIMUM BUDGET</Text>
+                    <TextInput style={styles.input} keyboardType="numeric" value={budgetMax} onChangeText={setBudgetMax} />
+                  </View>
+                </View>
+                <Text style={styles.label}>MEAL PLAN</Text>
+                <ChipSelector options={mealPlanOptions} value={mealPlan} onChange={setMealPlan} styles={styles} />
+                <Text style={styles.label}>SUBJECT</Text>
+                <TextInput style={styles.input} placeholder="e.g. Group booking enquiry" placeholderTextColor={COLORS.textMuted} value={subject} onChangeText={setSubject} />
+                <Text style={styles.label}>SPECIAL REQUIREMENTS</Text>
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  placeholder="Dietary needs, pickup requests, or other preferences"
+                  placeholderTextColor={COLORS.textMuted}
+                  multiline
+                  value={specialRequirements}
+                  onChangeText={setSpecialRequirements}
+                />
+                <Text style={styles.label}>TRAVEL PLANS & PREFERENCES</Text>
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  placeholder="Tell us about your plans or specific requirements"
+                  placeholderTextColor={COLORS.textMuted}
+                  multiline
+                  value={message}
+                  onChangeText={setMessage}
+                />
+                <View style={styles.trustBox}>
+                  <Text style={styles.trustIcon}>🔒</Text>
+                  <Text style={styles.trustText}>Your details are safe. We will only contact you regarding this tour request.</Text>
+                </View>
+              </>
+            )}
+          </ScrollView>
+          <View style={[styles.stepFooter, { paddingBottom: 20 + insets.bottom }]}>
+            <Pressable onPress={step === 0 ? handleClose : goPrevious} style={styles.stepBackBtn}>
+              <Text style={styles.stepBackText}>{step === 0 ? 'Cancel' : 'Back'}</Text>
+            </Pressable>
             <Pressable
               style={({ pressed }) => [
                 styles.submitBtn,
+                styles.stepNextBtn,
                 isSubmitting && styles.submitBtnDisabled,
                 pressed && !isSubmitting && styles.submitBtnPressed,
               ]}
-              onPress={handleSubmit}
+              onPress={step < STEPS.length - 1 ? goNext : handleSubmit}
               disabled={isSubmitting}
             >
-              {isSubmitting ? (
-                <ActivityIndicator color="#FFFFFF" size="small" />
-              ) : (
-                <>
-                  <Text style={styles.submitBtnText}>Submit Enquiry</Text>
-                  <Text style={styles.submitBtnArrow}>→</Text>
-                </>
+              {isSubmitting ? <ActivityIndicator color="#FFFFFF" size="small" /> : (
+                <Text style={styles.submitBtnText}>{step < STEPS.length - 1 ? 'Continue' : 'Prepare WhatsApp enquiry'}</Text>
               )}
             </Pressable>
-
-            <View style={styles.bottomSpacer} />
-          </ScrollView>
+          </View>
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -475,31 +563,10 @@ export const EnquiryModal: React.FC<EnquiryModalProps> = ({
 const makeStyles = (COLORS: ReturnType<typeof useColors>) => StyleSheet.create({
   keyboardAvoid: {
     flex: 1,
-    justifyContent: 'flex-end',
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0,0,0,0.55)',
   },
   sheet: {
+    flex: 1,
     backgroundColor: COLORS.card,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: '90%',
-    paddingTop: 10,
-    elevation: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: -4 },
-  },
-  handleBar: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: COLORS.border,
-    alignSelf: 'center',
-    marginBottom: 8,
   },
   header: {
     flexDirection: 'row',
@@ -538,18 +605,14 @@ const makeStyles = (COLORS: ReturnType<typeof useColors>) => StyleSheet.create({
     color: COLORS.textSecondary,
     marginTop: 2,
   },
-  closeBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     backgroundColor: COLORS.surface,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  closeBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: COLORS.textSecondary,
+    marginRight: 12,
   },
   tourChip: {
     flexDirection: 'row',
@@ -572,8 +635,44 @@ const makeStyles = (COLORS: ReturnType<typeof useColors>) => StyleSheet.create({
     fontWeight: '800',
     color: COLORS.primaryDark,
   },
+  progressContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  progressCopy: {
+    marginBottom: 12,
+  },
+  progressStep: {
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 1,
+    color: COLORS.primary,
+  },
+  progressTitle: {
+    marginTop: 4,
+    fontSize: 20,
+    fontWeight: '900',
+    color: COLORS.text,
+  },
+  progressDescription: {
+    marginTop: 3,
+    fontSize: 12,
+    color: COLORS.textSecondary,
+  },
+  progressTrack: {
+    height: 5,
+    overflow: 'hidden',
+    borderRadius: 4,
+    backgroundColor: COLORS.surface,
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 4,
+    backgroundColor: COLORS.primary,
+  },
   formScroll: {
-    maxHeight: 460,
+    flex: 1,
   },
   formContent: {
     paddingHorizontal: 20,
@@ -589,9 +688,6 @@ const makeStyles = (COLORS: ReturnType<typeof useColors>) => StyleSheet.create({
   loadingVariantsText: {
     fontSize: 12,
     color: COLORS.textMuted,
-  },
-  sectionBlock: {
-    marginBottom: 4,
   },
   chipsRow: {
     gap: 8,
@@ -616,6 +712,24 @@ const makeStyles = (COLORS: ReturnType<typeof useColors>) => StyleSheet.create({
   },
   chipTextActive: {
     color: COLORS.primary,
+  },
+  row: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  col: {
+    flex: 1,
+  },
+  readOnlyValue: {
+    minHeight: 44,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 10,
+    backgroundColor: COLORS.surface,
+    color: COLORS.textSecondary,
+    fontSize: 14,
   },
   chipSub: {
     fontSize: 10,
@@ -696,7 +810,7 @@ const makeStyles = (COLORS: ReturnType<typeof useColors>) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    marginTop: 16,
+    marginTop: 12,
     elevation: 3,
     shadowColor: COLORS.primary,
     shadowOpacity: 0.3,
@@ -721,7 +835,34 @@ const makeStyles = (COLORS: ReturnType<typeof useColors>) => StyleSheet.create({
     fontSize: 16,
     fontWeight: '800',
   },
-  bottomSpacer: {
-    height: 10,
+  stepFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    backgroundColor: COLORS.card,
+  },
+  stepBackBtn: {
+    minWidth: 82,
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+  },
+  stepBackText: {
+    color: COLORS.textSecondary,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  stepNextBtn: {
+    flex: 1,
+    minHeight: 48,
+    marginTop: 0,
   },
 });
