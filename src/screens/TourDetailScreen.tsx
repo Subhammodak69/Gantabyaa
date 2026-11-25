@@ -16,7 +16,7 @@ import { useColors } from '../theme/theme';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import Video from 'react-native-video';
 import { TourPackageDetail, TourPackageSummary, SeasonVariant, NavScreen } from '../types';
-import { fetchTourDetail, fetchTourVariant, fetchRulesRegulations, getTourWebUrl, openWhatsAppChat, submitReviewApi, updateReviewApi, fetchPackageReviews, fetchReviewEligibility } from '../api/tourApi';
+import { fetchTourDetail, fetchTourVariant, fetchRulesRegulations, getTourWebUrl, submitReviewApi, updateReviewApi, fetchPackageReviews, fetchReviewEligibility } from '../api/tourApi';
 import { RuleRegulation } from '../api/types';
 import { TourDetailSkeleton } from '../components/Skeleton';
 import { MediaViewer, MediaSelection } from '../components/MediaViewer';
@@ -37,6 +37,8 @@ interface TourDetailScreenProps {
     travelDate: string;
     durationDays?: number;
     durationNights?: number;
+    packageImage?: string;
+    variantPrice?: number;
   }) => void;
   isSaved?: boolean;
   onToggleSave?: () => void;
@@ -251,26 +253,23 @@ export const TourDetailScreen: React.FC<TourDetailScreenProps> = ({
 
   const handleShareEnquiry = () => {
     if (!tour || !activeSeason) return;
-    const imageUrl = activeSeason.cover_image || initialTour?.cover_image || '';
-    const msg = [
-      'Hello Gantabyaa team! 👋',
-      '',
-      'I would like to enquire about this tour package:',
-      `Package: ${tour.title}`,
-      `Variant: ${activeSeason.name}`,
-      `Departure date: ${selectedDate || 'Upcoming departure'}`,
-      `Duration: ${activeSeason.duration}`,
-      activeSeason.price ? `Quoted price: ₹${activeSeason.price.toLocaleString('en-IN')}` : '',
-      imageUrl ? `Package image: ${imageUrl}` : '',
-      '',
-      'Please share availability, pricing and booking details.',
-    ].filter(Boolean).join('\n');
-    openWhatsAppChat(msg);
+    setEnquiryModalVisible(true);
   };
 
-  const handleEnquirePress = () => {
+  const handleCustomizePress = () => {
     if (!tour || !activeSeason) return;
-    setEnquiryModalVisible(true);
+    onStartEnquiry({
+      tourSlug: tour.slug || slug,
+      tourTitle: tour.title || '',
+      variantName: activeSeason.name || '',
+      variantId: activeSeason.id || '',
+      destinationId: (tour as any).destination_id || '',
+      travelDate: '',
+      durationDays: activeSeason.duration_days || 0,
+      durationNights: activeSeason.duration_nights || 0,
+      packageImage: activeSeason.cover_image || tour.cover_image || '',
+      variantPrice: activeSeason.starting_price || activeSeason.price || 0,
+    });
   };
 
   const handleReviewSubmit = async () => {
@@ -880,9 +879,9 @@ export const TourDetailScreen: React.FC<TourDetailScreenProps> = ({
 
         <Pressable
           style={styles.enquireActionBtn}
-          onPress={handleEnquirePress}
+          onPress={handleCustomizePress}
         >
-          <Text style={styles.enquireActionText}>Enquire</Text>
+          <Text style={styles.enquireActionText}>Customise</Text>
         </Pressable>
       </View>
 
@@ -1065,6 +1064,8 @@ export const TourDetailScreen: React.FC<TourDetailScreenProps> = ({
                         travelDate: chosenDate,
                         durationDays: activeSeason?.duration_days || 0,
                         durationNights: activeSeason?.duration_nights || 0,
+                        packageImage: activeSeason?.cover_image || tour?.cover_image || '',
+                        variantPrice: activeSeason?.starting_price || activeSeason?.price || 0,
                       });
                     }}
                   >

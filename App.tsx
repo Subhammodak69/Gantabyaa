@@ -183,6 +183,8 @@ function AppInner() {
     tourTitle?: string;
     variantName?: string;
     variantId?: string;
+    packageImage?: string;
+    variantPrice?: number;
     packageId?: string;
     destinationId?: string;
     destinationName?: string;
@@ -507,6 +509,8 @@ function AppInner() {
     travelDate: string;
     durationDays?: number;
     durationNights?: number;
+    packageImage?: string;
+    variantPrice?: number;
   }) => {
     const matchedTour = tours.find(t => t.slug === details.tourSlug) || null;
     setPrefilledEnquiry({
@@ -514,6 +518,8 @@ function AppInner() {
       tourTitle: details.tourTitle,
       variantName: details.variantName,
       variantId: details.variantId,
+      packageImage: details.packageImage || matchedTour?.cover_image || '',
+      variantPrice: details.variantPrice || 0,
       packageId: matchedTour?.id || details.tourSlug,
       destinationId: (matchedTour as any)?.destination_id || details.destinationId || '',
       destinationName: matchedTour?.destination || matchedTour?.title || details.tourTitle,
@@ -530,6 +536,7 @@ function AppInner() {
       tourSlug: tour.slug,
       tourTitle: tour.title,
       packageId: tour.id,
+      packageImage: tour.cover_image || '',
       destinationId: (tour as any).destination_id || '',
       destinationName: (tour as any).destination || tour.title,
       travelDate: '',

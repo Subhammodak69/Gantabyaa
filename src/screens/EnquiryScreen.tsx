@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Modal,
   FlatList,
+  Image,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -19,7 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/theme';
 import { useAppDialog } from '../components/AppDialog';
 import { CustomDateField } from '../components/CustomDatePicker';
-import { fetchDestinations, fetchTourPackageVariants, fetchTourPackages, openWhatsAppChat } from '../api/tourApi';
+import { fetchAllDestinations, fetchTourPackageVariants, fetchTourPackages, openWhatsAppChat } from '../api/tourApi';
 import enums from '../utils/enums.json';
 import { NavScreen } from '../types';
 
@@ -29,11 +30,15 @@ interface EnquiryScreenProps {
   onEnquirySubmitted?: (enquiry: any) => void;
   user?: import('../api/tourApi').AuthUser | null;
   prefilled?: {
+    tourSlug?: string;
     tourTitle?: string;
     packageId?: string;
     destinationId?: string;
     destinationName?: string;
     variantId?: string;
+    variantName?: string;
+    packageImage?: string;
+    variantPrice?: number;
     travelDate?: string;
     durationDays?: number;
     durationNights?: number;
@@ -53,14 +58,6 @@ function durationNumber(value: unknown): number | undefined {
     return Array.isArray(items) ? durationNumber(items[0]) : undefined;
   }
   return undefined;
-}
-
-function departureDateLabel(value: string): string {
-  const [year, month, day] = String(value).slice(0, 10).split('-').map(Number);
-  if (!year || !month || !day) return value;
-  return new Date(year, month - 1, day).toLocaleDateString('en-IN', {
-    day: 'numeric', month: 'short', year: 'numeric',
-  });
 }
 
 function SearchableSelect({
@@ -192,15 +189,6 @@ const roomTypeOptions: ChipOption[] = [
   { label: 'Executive', value: 'EXECUTIVE' },
   { label: 'Presidential', value: 'PRESIDENTIAL' },
 ];
-const enquiryTypeOptions: ChipOption[] = Object.entries(enums.EnquiryType)
-  .filter(([, v]) => {
-    const val = String(v).toUpperCase().replace(/[\s_-]+/g, '');
-    return val !== 'FIXEDTOUR';
-  })
-  .map(([, v]) => ({
-    label: (v as string).replace(/_/g, ' '),
-    value: v as string,
-  }));
 const STEPS = [
   { title: 'Contact details', description: 'Who should we contact?' },
   { title: 'Choose your trip', description: 'Destination or tour package' },
@@ -217,6 +205,7 @@ export const EnquiryScreen: React.FC<EnquiryScreenProps> = ({
   const { colors: COLORS, isDark } = useTheme();
   const styles = makeStyles(COLORS, isDark);
   const { showDialog } = useAppDialog();
+  const enquiryType = 'CUSTOM_TOUR';
   const [name, setName] = useState(initialUser?.name || '');
   const [mobile, setMobile] = useState(initialUser?.mobile || '');
   const [email, setEmail] = useState(initialUser?.email || '');
@@ -228,7 +217,12 @@ export const EnquiryScreen: React.FC<EnquiryScreenProps> = ({
     prefilled?.packageId ? 'PACKAGE' : prefilled?.destinationId ? 'DESTINATION' : '',
   );
   const [packages, setPackages] = useState<any[]>([]);
+  const [packagesLoading, setPackagesLoading] = useState(true);
+  const [packagesError, setPackagesError] = useState('');
+  const [packageSearch, setPackageSearch] = useState('');
   const [destinations, setDestinations] = useState<any[]>([]);
+  const [destinationsLoading, setDestinationsLoading] = useState(true);
+  const [destinationsError, setDestinationsError] = useState('');
   const [variants, setVariants] = useState<any[]>([]);
   const [travelDate, setTravelDate] = useState(prefilled?.travelDate || '');
   const [travelDurationDay, setTravelDurationDay] = useState('');
@@ -246,16 +240,46 @@ export const EnquiryScreen: React.FC<EnquiryScreenProps> = ({
   const [roomType, setRoomType] = useState('');
   const [message, setMessage] = useState('');
   const [specialRequirements, setSpecialRequirements] = useState('');
-  const [enquiryType, setEnquiryType] = useState('CUSTOM_TOUR');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [step, setStep] = useState(0);
   const [errorMsg, setErrorMsg] = useState('');
   const [variantsLoading, setVariantsLoading] = useState(false);
   const [variantsError, setVariantsError] = useState('');
-  const selectedPackage = packages.find(item => item.id === packageId);
+  const selectedPackage = React.useMemo(
+    () => packages.find(item => item.id === packageId)
+      || (prefilled?.packageId && packageId === prefilled.packageId ? {
+        id: prefilled.packageId,
+        slug: prefilled.tourSlug || '',
+        title: prefilled.tourTitle || '',
+        destination: prefilled.destinationName || '',
+        cover_image: prefilled.packageImage || '',
+      } : undefined),
+    [packages, packageId, prefilled],
+  );
   const selectedVariant = variants.find(item =>
     item.id === variantId || item.key === variantId || item.name === variantId,
-  ) || variants.find(item => item.is_default) || variants[0];
+  ) || (prefilled?.variantId && variantId === prefilled.variantId ? {
+    id: prefilled.variantId,
+    name: prefilled.variantName || '',
+    cover_image: prefilled.packageImage || '',
+    starting_price: prefilled.variantPrice,
+    duration_days: prefilled.durationDays,
+    duration_nights: prefilled.durationNights,
+  } : undefined) || (!variantId ? variants.find(item => item.is_default) || variants[0] : undefined);
+  const filteredPackages = packages.filter(item =>
+    `${item.title || ''} ${item.destination || item.destination_name || ''} ${item.tour_code || ''}`
+      .toLowerCase()
+      .includes(packageSearch.trim().toLowerCase()),
+  );
+  const packageOptions = selectedPackage && !filteredPackages.some(item => item.id === selectedPackage.id)
+    ? [selectedPackage, ...filteredPackages]
+    : filteredPackages;
+  const packageImage = selectedVariant?.cover_image
+    || selectedPackage?.cover_image
+    || selectedPackage?.image
+    || selectedPackage?.banner?.image
+    || '';
+  const selectedVariantName = selectedVariant?.name || selectedVariant?.season_name || prefilled?.variantName || '';
   const isPackageEnquiry = selectionMode === 'PACKAGE' && Boolean(packageId);
   const usesPrefilledVariant = packageId === prefilled?.packageId && variantId === prefilled?.variantId;
   const resolvedTravelDurationDay = isPackageEnquiry
@@ -264,20 +288,20 @@ export const EnquiryScreen: React.FC<EnquiryScreenProps> = ({
   const resolvedTravelDurationNight = isPackageEnquiry
     ? durationNumber(selectedVariant?.duration_nights) ?? (usesPrefilledVariant ? durationNumber(prefilled?.durationNights) : undefined) ?? durationNumber(selectedPackage?.duration_nights) ?? 0
     : Number(travelDurationNight) || 0;
-  const departureDateOptions = (selectedVariant?.dates || [])
-    .filter((item: any) => item.date || item.departure_date)
-    .map((item: any) => {
-      const value = item.date || item.departure_date || '';
-      return { label: item.return_date ? `${departureDateLabel(value)} – ${departureDateLabel(item.return_date)}` : departureDateLabel(value), value };
-    });
   const selectionIsValid = selectionMode === 'PACKAGE'
     ? Boolean(packageId) && !variantsLoading && (!variants.length || Boolean(selectedVariant))
     : selectionMode === 'DESTINATION' && Boolean(destinationId);
   const contactIsValid = Boolean(name.trim()) && mobile.replace(/\D/g, '').length >= 10;
 
   React.useEffect(() => {
-    fetchTourPackages(1, 50).then(setPackages).catch(() => setPackages([]));
-    fetchDestinations(1, 100).then(setDestinations).catch(() => setDestinations([]));
+    fetchTourPackages(1, 50)
+      .then(setPackages)
+      .catch((error: any) => setPackagesError(error?.message || 'Unable to load tour packages.'))
+      .finally(() => setPackagesLoading(false));
+    fetchAllDestinations(100)
+      .then(setDestinations)
+      .catch((error: any) => setDestinationsError(error?.message || 'Unable to load destinations.'))
+      .finally(() => setDestinationsLoading(false));
   }, []);
 
   React.useEffect(() => {
@@ -342,7 +366,6 @@ export const EnquiryScreen: React.FC<EnquiryScreenProps> = ({
     setRoomType('');
     setMessage('');
     setSpecialRequirements('');
-    setEnquiryType('CUSTOM_TOUR');
     setStep(0);
     setErrorMsg('');
   };
@@ -371,7 +394,7 @@ export const EnquiryScreen: React.FC<EnquiryScreenProps> = ({
         `Email: ${email.trim() || 'Not provided'}`,
         `Destination: ${destination.trim() || prefilled?.destinationName || 'Not specified'}`,
         `Package: ${selectedPackage?.title || prefilled?.tourTitle || 'Custom package'}`,
-        `Variant: ${selectedVariant?.name || selectedVariant?.season_name || 'Not selected'}`,
+        `Variant: ${selectedVariantName || 'Not selected'}`,
         `Departure date: ${travelDate.trim() || 'Not selected'}`,
         `Duration: ${resolvedTravelDurationDay} days / ${resolvedTravelDurationNight} nights`,
         `Travellers: Adults ${adultCount || 0}, Children ${childCount || 0}, Seniors ${seniorCount || 0}`,
@@ -384,11 +407,7 @@ export const EnquiryScreen: React.FC<EnquiryScreenProps> = ({
         `Meal plan: ${mealPlan || 'ANY'}`,
         `Special requirements: ${specialRequirements.trim() || 'None'}`,
         `Message / preferences: ${message.trim() || 'None'}`,
-        selectedVariant?.cover_image
-          ? `Package image: ${selectedVariant.cover_image}`
-          : (selectedPackage?.image || selectedPackage?.cover_image
-            ? `Package image: ${selectedPackage.image || selectedPackage.cover_image}`
-            : ''),
+        packageImage ? `Package image: ${packageImage}` : '',
         '',
         'Please help me with availability, pricing and a personalized itinerary.',
       ].filter(Boolean).join('\n');
@@ -435,37 +454,15 @@ export const EnquiryScreen: React.FC<EnquiryScreenProps> = ({
 
   return (
     <View style={styles.container}>
-      <View style={styles.navigationHeader}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-          style={styles.backButton}
-          onPress={onBack}
-        >
-          <Feather name="arrow-left" size={21} color={COLORS.text} />
-        </Pressable>
-        <View style={styles.navigationHeaderCopy}>
-          <Text style={styles.navigationTitle}>Enquiry</Text>
-          <Text style={styles.navigationSubtitle}>Plan your next journey</Text>
-        </View>
-      </View>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Header summary card */}
-        <View style={styles.headerCard}>
-          <View style={styles.headerIconContainer}>
-            <Text style={styles.headerIcon}>🎨</Text>
-          </View>
-          <View style={styles.headerTextContainer}>
-            <Text style={styles.pageTitle}>{prefilled?.tourTitle ? 'Send your enquiry' : 'Custom Package Enquiry'}</Text>
-            <Text style={styles.pageSubtitle}>
-              {prefilled?.tourTitle ? `Request a quote for ${prefilled.tourTitle}` : 'Tailor-make your holiday with vehicles, meals & custom itinerary'}
-            </Text>
-          </View>
+        <View style={styles.pageHeader}>
+          <Text style={styles.pageTitle}>Customisation</Text>
+          <Text style={styles.pageSubtitle}>Tell us your preferences and we'll tailor the trip to you.</Text>
         </View>
 
         <View style={styles.stepHeader}>
@@ -491,88 +488,212 @@ export const EnquiryScreen: React.FC<EnquiryScreenProps> = ({
 
         {step === 1 && <>
           <Text style={styles.label}>CHOOSE PACKAGE OR DESTINATION *</Text>
-          <SearchableSelect
-            options={[{ label: 'Choose a destination', value: 'DESTINATION' }, { label: 'Choose a tour package', value: 'PACKAGE' }]}
-            value={selectionMode}
-            onChange={choice => {
-              setSelectionMode(choice as 'PACKAGE' | 'DESTINATION');
-              setPackageId('');
-              setVariantId('');
-              setDestinationId('');
-              setDestination('');
-              setTravelDate('');
-              setErrorMsg('');
-            }}
-            placeholder="Choose package or destination"
-            styles={styles}
-            colors={COLORS}
-            isDark={isDark}
-          />
+          <View style={styles.selectionModeRow}>
+            {[
+              { value: 'PACKAGE' as const, title: 'Tour package', subtitle: 'Choose a ready-made tour', icon: 'briefcase' as const },
+              { value: 'DESTINATION' as const, title: 'Destination', subtitle: 'Plan from a place', icon: 'map-pin' as const },
+            ].map(option => {
+              const isSelected = selectionMode === option.value;
+              return (
+                <Pressable
+                  key={option.value}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isSelected }}
+                  style={[styles.selectionModeCard, isSelected && styles.selectionModeCardSelected]}
+                  onPress={() => {
+                    if (selectionMode === option.value) return;
+                    setSelectionMode(option.value);
+                    setPackageId('');
+                    setVariantId('');
+                    setDestinationId('');
+                    setDestination('');
+                    setTravelDate('');
+                    setErrorMsg('');
+                  }}
+                >
+                  <Feather name={option.icon} size={18} color={isSelected ? COLORS.primary : COLORS.textMuted} />
+                  <View style={styles.selectionModeCopy}>
+                    <Text style={[styles.selectionModeTitle, isSelected && styles.selectedText]}>{option.title}</Text>
+                    <Text style={styles.selectionModeSubtitle}>{option.subtitle}</Text>
+                  </View>
+                  {isSelected ? <Feather name="check-circle" size={18} color={COLORS.primary} /> : null}
+                </Pressable>
+              );
+            })}
+          </View>
           {selectionMode === 'PACKAGE' && <>
-            <Text style={styles.label}>PACKAGE</Text>
-            <SearchableSelect
-              options={packages.map(item => ({ label: item.title || item.destination || 'Tour package', value: item.id }))}
-              value={packageId}
-              onChange={value => {
-                const item = packages.find(entry => entry.id === value);
-                setPackageId(value);
-                setVariantId('');
-                setDestinationId(item?.destination_id || '');
-                setDestination(item?.destination || item?.destination_name || '');
-                setTravelDate('');
-              }}
-              placeholder="Search and select a package"
-              styles={styles}
-              colors={COLORS}
-              isDark={isDark}
+            <Text style={styles.label}>CHOOSE A PACKAGE</Text>
+            <TextInput
+              style={styles.input}
+              value={packageSearch}
+              onChangeText={setPackageSearch}
+              placeholder="Search packages or destinations"
+              placeholderTextColor={COLORS.textMuted}
+              autoCapitalize="none"
             />
-            {variantsLoading ? <Text style={styles.helperText}>Loading package variants…</Text> : null}
-            {variantsError ? <Text style={styles.errorMessage}>{variantsError}</Text> : null}
-            {!variantsLoading && variants.length > 0 && <>
-              <Text style={styles.label}>TOUR VARIANT</Text>
-              <SearchableSelect
-                options={variants.map(item => ({ label: item.name || item.season_name || 'Tour variant', value: item.id }))}
-                value={selectedVariant?.id || ''}
-                onChange={value => {
-                  setVariantId(value);
-                  setTravelDate('');
-                  setErrorMsg('');
-                }}
-                placeholder="Search and select a tour variant"
-                styles={styles}
-                colors={COLORS}
-                isDark={isDark}
-              />
-            </>}
+            {packagesError ? <Text style={styles.errorMessage}>{packagesError}</Text> : null}
+            {packagesLoading ? (
+              <View style={styles.loadingOptions}>
+                <ActivityIndicator size="small" color={COLORS.primary} />
+                <Text style={styles.helperText}>Loading tour packages…</Text>
+              </View>
+            ) : packageOptions.length ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.packageList}
+                keyboardShouldPersistTaps="handled"
+              >
+                {packageOptions.map(item => {
+                  const isSelected = item.id === packageId;
+                  const image = item.cover_image || item.image || item.banner?.image;
+                  return (
+                    <Pressable
+                      key={item.id}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: isSelected }}
+                      style={[styles.packageOption, isSelected && styles.packageOptionSelected]}
+                      onPress={() => {
+                        if (isSelected) return;
+                        setPackageId(item.id);
+                        setVariantId('');
+                        setDestinationId(item.destination_id || '');
+                        setDestination(item.destination || item.destination_name || '');
+                        setTravelDate('');
+                        setErrorMsg('');
+                      }}
+                    >
+                      {image ? (
+                        <Image source={{ uri: image }} style={styles.packageOptionImage} />
+                      ) : (
+                        <View style={styles.packageImagePlaceholder}>
+                          <Feather name="map" size={24} color={COLORS.textMuted} />
+                        </View>
+                      )}
+                      <View style={styles.packageOptionBody}>
+                        <Text style={styles.packageOptionTitle} numberOfLines={2}>{item.title || 'Tour package'}</Text>
+                        <Text style={styles.packageOptionDestination} numberOfLines={1}>
+                          {item.destination || item.destination_name || 'Destination details unavailable'}
+                        </Text>
+                        {isSelected ? <Text style={styles.selectedPackageLabel}>SELECTED</Text> : null}
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            ) : (
+              <Text style={styles.emptyOptions}>
+                {packageSearch ? 'No packages match your search.' : 'No tour packages are available right now.'}
+              </Text>
+            )}
+            {packageId ? <>
+              <Text style={styles.label}>CHOOSE A PACKAGE VARIANT</Text>
+              {variantsLoading ? (
+                <View style={styles.loadingOptions}>
+                  <ActivityIndicator size="small" color={COLORS.primary} />
+                  <Text style={styles.helperText}>Loading package variants…</Text>
+                </View>
+              ) : null}
+              {variantsError ? <Text style={styles.errorMessage}>{variantsError}</Text> : null}
+              {!variantsLoading && variants.length > 0 ? (
+                <View style={styles.variantList}>
+                  {variants.map(item => {
+                    const isSelected = item.id === variantId
+                      || (!variantId && (item.is_default || item.id === variants[0]?.id));
+                    const price = item.starting_price ?? item.price ?? item.selling_price;
+                    return (
+                      <Pressable
+                        key={item.id}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: isSelected }}
+                        style={[styles.variantOption, isSelected && styles.variantOptionSelected]}
+                        onPress={() => {
+                          setVariantId(item.id);
+                          setTravelDate('');
+                          setErrorMsg('');
+                        }}
+                      >
+                        <View style={styles.variantOptionCopy}>
+                          <Text style={styles.variantOptionTitle} numberOfLines={2}>
+                            {item.name || item.season_name || 'Standard variant'}
+                          </Text>
+                          <Text style={styles.variantOptionDetails}>
+                            {item.duration_days || 0} days · {item.duration_nights || 0} nights
+                            {price ? ` · From ₹${Number(price).toLocaleString('en-IN')}` : ''}
+                          </Text>
+                          {(item.valid_from || item.valid_to) ? (
+                            <Text style={styles.variantOptionDetails}>
+                              Valid {item.valid_from || 'anytime'}{item.valid_to ? ` – ${item.valid_to}` : ''}
+                            </Text>
+                          ) : null}
+                        </View>
+                        {isSelected ? <Feather name="check-circle" size={19} color={COLORS.primary} /> : null}
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              ) : !variantsLoading && !variantsError ? (
+                <Text style={styles.emptyOptions}>No variants are listed for this package.</Text>
+              ) : null}
+            </> : null}
           </>}
           {selectionMode === 'DESTINATION' && <>
-            <Text style={styles.label}>DESTINATION</Text>
-            <SearchableSelect
-              options={destinations.map(item => ({ label: item.name || item.destination_name || 'Destination', value: item.id }))}
-              value={destinationId}
-              onChange={value => {
-                const item = destinations.find(entry => entry.id === value);
-                setDestinationId(value);
-                setDestination(item?.name || item?.destination_name || '');
-                setErrorMsg('');
-              }}
-              placeholder="Search and select a destination"
-              styles={styles}
-              colors={COLORS}
-              isDark={isDark}
-            />
+            <Text style={styles.label}>CHOOSE A DESTINATION</Text>
+            {destinationsError ? <Text style={styles.errorMessage}>{destinationsError}</Text> : null}
+            {destinationsLoading ? (
+              <View style={styles.loadingOptions}>
+                <ActivityIndicator size="small" color={COLORS.primary} />
+                <Text style={styles.helperText}>Loading destinations…</Text>
+              </View>
+            ) : destinations.length ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.packageList}
+              >
+                {destinations.map(item => {
+                  const isSelected = item.id === destinationId;
+                  return (
+                    <Pressable
+                      key={item.id}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: isSelected }}
+                      style={[styles.packageOption, isSelected && styles.packageOptionSelected]}
+                      onPress={() => {
+                        if (isSelected) return;
+                        setDestinationId(item.id);
+                        setDestination(item.name || '');
+                        setTravelDate('');
+                        setErrorMsg('');
+                      }}
+                    >
+                      {item.image_url ? (
+                        <Image source={{ uri: item.image_url }} style={styles.packageOptionImage} />
+                      ) : (
+                        <View style={styles.packageImagePlaceholder}>
+                          <Feather name="map-pin" size={24} color={COLORS.textMuted} />
+                        </View>
+                      )}
+                      <View style={styles.packageOptionBody}>
+                        <Text style={styles.packageOptionTitle} numberOfLines={2}>{item.name || 'Destination'}</Text>
+                        <Text style={styles.packageOptionDestination} numberOfLines={1}>
+                          {item.country || (item.is_domestic ? 'Domestic' : 'International')}
+                        </Text>
+                        {isSelected ? <Text style={styles.selectedPackageLabel}>SELECTED</Text> : null}
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            ) : (
+              <Text style={styles.emptyOptions}>No destinations are available right now.</Text>
+            )}
           </>}
         </>}
 
         {step === 2 && <>
           <Text style={styles.label}>PREFERRED DEPARTURE DATE</Text>
-          {variantsLoading ? (
-            <Text style={styles.helperText}>Loading package dates…</Text>
-          ) : departureDateOptions.length > 0 ? (
-            <SearchableSelect options={departureDateOptions} value={travelDate} onChange={setTravelDate} placeholder="Select departure date" styles={styles} colors={COLORS} isDark={isDark} />
-          ) : (
-            <CustomDateField value={travelDate} onChange={setTravelDate} placeholder="Choose a departure date" title="Choose departure date" />
-          )}
+          <CustomDateField value={travelDate} onChange={setTravelDate} placeholder="Choose a departure date" title="Choose departure date" />
           <View style={styles.row}>
             <View style={styles.col}>
               <Text style={styles.label}>DAYS</Text>
@@ -592,7 +713,13 @@ export const EnquiryScreen: React.FC<EnquiryScreenProps> = ({
 
         {step === 3 && <>
           <Text style={styles.label}>ENQUIRY TYPE</Text>
-          <SearchableSelect options={enquiryTypeOptions} value={enquiryType} onChange={setEnquiryType} placeholder="Select enquiry type" styles={styles} colors={COLORS} isDark={isDark} />
+          <View
+            accessibilityRole="text"
+            accessibilityLabel="Enquiry type: Custom Tour"
+            style={styles.selectButton}
+          >
+            <Text style={styles.selectText}>CUSTOM TOUR</Text>
+          </View>
           <View style={styles.row}>
             <View style={styles.col}><Text style={styles.label}>ROOMS</Text><TextInput style={styles.input} keyboardType="numeric" value={noRoom} onChangeText={setNoRoom} /></View>
             <View style={styles.col}><Text style={styles.label}>VEHICLES</Text><TextInput style={styles.input} keyboardType="numeric" value={vehicleCount} onChangeText={setVehicleCount} /></View>
@@ -620,19 +747,19 @@ export const EnquiryScreen: React.FC<EnquiryScreenProps> = ({
         </>}
 
         {errorMsg ? <Text style={styles.errorMessage}>{errorMsg}</Text> : null}
+        <View style={styles.formActions}>
+          <Pressable onPress={step === 0 ? onBack : goPrevious} style={styles.stepBackButton}>
+            <Text style={styles.stepBackText}>{step === 0 ? 'Cancel' : 'Back'}</Text>
+          </Pressable>
+          <Pressable
+            onPress={step < STEPS.length - 1 ? goNext : handleSubmit}
+            disabled={isSubmitting}
+            style={({ pressed }) => [styles.submitBtn, isSubmitting && styles.submitBtnDisabled, pressed && !isSubmitting && styles.submitBtnPressed]}
+          >
+            {isSubmitting ? <ActivityIndicator color="#FFFFFF" size="small" /> : <Text style={styles.submitBtnText}>{step < STEPS.length - 1 ? 'Continue' : 'Send Enquiry'}</Text>}
+          </Pressable>
+        </View>
       </ScrollView>
-      <View style={styles.stepFooter}>
-        <Pressable onPress={step === 0 ? onBack : goPrevious} style={styles.stepBackButton}>
-          <Text style={styles.stepBackText}>{step === 0 ? 'Cancel' : 'Back'}</Text>
-        </Pressable>
-        <Pressable
-          onPress={step < STEPS.length - 1 ? goNext : handleSubmit}
-          disabled={isSubmitting}
-          style={({ pressed }) => [styles.submitBtn, styles.stepContinueButton, isSubmitting && styles.submitBtnDisabled, pressed && !isSubmitting && styles.submitBtnPressed]}
-        >
-          {isSubmitting ? <ActivityIndicator color="#FFFFFF" size="small" /> : <Text style={styles.submitBtnText}>{step < STEPS.length - 1 ? 'Continue' : 'Prepare WhatsApp enquiry'}</Text>}
-        </Pressable>
-      </View>
     </View>
   );
 };
@@ -643,37 +770,6 @@ const makeStyles = (COLORS: ReturnType<typeof useTheme>['colors'], isDark: boole
       flex: 1,
       backgroundColor: COLORS.bg,
     },
-    navigationHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      borderBottomWidth: 1,
-      borderBottomColor: COLORS.border,
-      backgroundColor: COLORS.card,
-    },
-    backButton: {
-      width: 38,
-      height: 38,
-      borderRadius: 12,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: COLORS.surface,
-      marginRight: 11,
-    },
-    navigationHeaderCopy: {
-      flex: 1,
-    },
-    navigationTitle: {
-      color: COLORS.text,
-      fontSize: 17,
-      fontWeight: '900',
-    },
-    navigationSubtitle: {
-      color: COLORS.textMuted,
-      fontSize: 11,
-      marginTop: 2,
-    },
     scrollView: {
       flex: 1,
     },
@@ -681,20 +777,8 @@ const makeStyles = (COLORS: ReturnType<typeof useTheme>['colors'], isDark: boole
       padding: 16,
       paddingBottom: 40,
     },
-    headerCard: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: COLORS.card,
-      borderRadius: 16,
-      padding: 16,
-      marginBottom: 16,
-      borderWidth: 1,
-      borderColor: COLORS.border,
-      elevation: 2,
-      shadowColor: '#000',
-      shadowOpacity: isDark ? 0.2 : 0.05,
-      shadowRadius: 6,
-      shadowOffset: { width: 0, height: 2 },
+    pageHeader: {
+      marginBottom: 18,
     },
     stepHeader: {
       paddingVertical: 8,
@@ -729,31 +813,16 @@ const makeStyles = (COLORS: ReturnType<typeof useTheme>['colors'], isDark: boole
       borderRadius: 4,
       backgroundColor: COLORS.primary,
     },
-    headerIconContainer: {
-      width: 48,
-      height: 48,
-      borderRadius: 14,
-      backgroundColor: isDark ? '#0F3B32' : '#DCFCE7',
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginRight: 14,
-    },
-    headerIcon: {
-      fontSize: 24,
-    },
-    headerTextContainer: {
-      flex: 1,
-    },
     pageTitle: {
-      fontSize: 18,
+      fontSize: 23,
       fontWeight: '900',
       color: COLORS.text,
     },
     pageSubtitle: {
-      fontSize: 12,
+      fontSize: 13,
       color: COLORS.textSecondary,
-      marginTop: 2,
-      lineHeight: 16,
+      marginTop: 5,
+      lineHeight: 19,
     },
     label: {
       fontSize: 11,
@@ -862,6 +931,145 @@ const makeStyles = (COLORS: ReturnType<typeof useTheme>['colors'], isDark: boole
       fontSize: 12,
       marginTop: 8,
     },
+    selectionModeRow: {
+      flexDirection: 'row',
+      gap: 10,
+      marginTop: 2,
+    },
+    selectionModeCard: {
+      flex: 1,
+      minHeight: 76,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 9,
+      paddingHorizontal: 11,
+      paddingVertical: 10,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      backgroundColor: COLORS.card,
+    },
+    selectionModeCardSelected: {
+      borderColor: COLORS.primary,
+      backgroundColor: isDark ? 'rgba(20, 184, 166, 0.1)' : '#F0FDFA',
+    },
+    selectionModeCopy: {
+      flex: 1,
+    },
+    selectionModeTitle: {
+      color: COLORS.text,
+      fontSize: 12,
+      fontWeight: '800',
+    },
+    selectedText: {
+      color: COLORS.primary,
+    },
+    selectionModeSubtitle: {
+      color: COLORS.textMuted,
+      fontSize: 10,
+      lineHeight: 14,
+      marginTop: 3,
+    },
+    loadingOptions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 9,
+      minHeight: 54,
+      paddingHorizontal: 12,
+    },
+    packageList: {
+      gap: 12,
+      paddingVertical: 2,
+      paddingRight: 16,
+    },
+    packageOption: {
+      width: 226,
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      borderRadius: 13,
+      backgroundColor: COLORS.card,
+    },
+    packageOptionSelected: {
+      borderColor: COLORS.primary,
+      borderWidth: 2,
+    },
+    packageOptionImage: {
+      width: '100%',
+      height: 112,
+      backgroundColor: COLORS.surface,
+    },
+    packageImagePlaceholder: {
+      width: '100%',
+      height: 112,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: COLORS.surface,
+    },
+    packageOptionBody: {
+      padding: 11,
+    },
+    packageOptionTitle: {
+      color: COLORS.text,
+      fontSize: 13,
+      fontWeight: '800',
+      lineHeight: 18,
+    },
+    packageOptionDestination: {
+      color: COLORS.textMuted,
+      fontSize: 11,
+      marginTop: 4,
+    },
+    selectedPackageLabel: {
+      color: COLORS.primary,
+      fontSize: 9,
+      fontWeight: '900',
+      letterSpacing: 0.8,
+      marginTop: 8,
+    },
+    variantList: {
+      gap: 9,
+    },
+    variantOption: {
+      minHeight: 68,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      paddingHorizontal: 13,
+      paddingVertical: 11,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      backgroundColor: COLORS.card,
+    },
+    variantOptionSelected: {
+      borderColor: COLORS.primary,
+      backgroundColor: isDark ? 'rgba(20, 184, 166, 0.1)' : '#F0FDFA',
+    },
+    variantOptionCopy: {
+      flex: 1,
+    },
+    variantOptionTitle: {
+      color: COLORS.text,
+      fontSize: 13,
+      fontWeight: '800',
+    },
+    variantOptionDetails: {
+      color: COLORS.textMuted,
+      fontSize: 11,
+      lineHeight: 16,
+      marginTop: 4,
+    },
+    emptyOptions: {
+      color: COLORS.textMuted,
+      borderWidth: 1,
+      borderStyle: 'dashed',
+      borderColor: COLORS.border,
+      borderRadius: 11,
+      padding: 13,
+      fontSize: 12,
+      marginTop: 5,
+    },
     errorMessage: {
       color: COLORS.danger,
       backgroundColor: isDark ? 'rgba(239, 68, 68, 0.12)' : '#FEF2F2',
@@ -930,49 +1138,42 @@ const makeStyles = (COLORS: ReturnType<typeof useTheme>['colors'], isDark: boole
     },
     submitBtn: {
       backgroundColor: isDark ? COLORS.gold : COLORS.primary,
-      borderRadius: 12,
-      paddingVertical: 15,
+      borderRadius: 10,
+      minHeight: 42,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
       gap: 8,
-      marginTop: 20,
-      elevation: 3,
+      elevation: 2,
       shadowColor: isDark ? COLORS.gold : COLORS.primary,
       shadowOpacity: 0.3,
-      shadowRadius: 8,
-      shadowOffset: { width: 0, height: 4 },
+      shadowRadius: 5,
+      shadowOffset: { width: 0, height: 2 },
     },
-    stepFooter: {
+    formActions: {
       flexDirection: 'row',
       alignItems: 'center',
+      justifyContent: 'flex-end',
       gap: 10,
-      paddingHorizontal: 16,
-      paddingTop: 12,
-      paddingBottom: 14,
-      borderTopWidth: 1,
-      borderTopColor: COLORS.border,
-      backgroundColor: COLORS.card,
+      marginTop: 24,
+      marginBottom: 6,
     },
     stepBackButton: {
-      minHeight: 48,
-      minWidth: 82,
+      minHeight: 42,
+      minWidth: 72,
       alignItems: 'center',
       justifyContent: 'center',
       borderWidth: 1,
       borderColor: COLORS.border,
-      borderRadius: 12,
-      paddingHorizontal: 16,
+      borderRadius: 10,
+      paddingHorizontal: 14,
     },
     stepBackText: {
       color: COLORS.textSecondary,
-      fontSize: 14,
+      fontSize: 12,
       fontWeight: '800',
-    },
-    stepContinueButton: {
-      flex: 1,
-      minHeight: 48,
-      marginTop: 0,
     },
     submitBtnDisabled: {
       opacity: 0.65,
@@ -983,9 +1184,9 @@ const makeStyles = (COLORS: ReturnType<typeof useTheme>['colors'], isDark: boole
     },
     submitBtnText: {
       color: isDark ? COLORS.primaryDark : '#FFFFFF',
-      fontSize: 15,
+      fontSize: 13,
       fontWeight: '800',
-      letterSpacing: 0.3,
+      letterSpacing: 0.2,
     },
     submitBtnArrow: {
       color: isDark ? COLORS.primaryDark : '#FFFFFF',
