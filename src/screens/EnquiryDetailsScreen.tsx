@@ -173,7 +173,7 @@ export const EnquiryDetailsScreen: React.FC<Props> = ({enquiry, onBack, onViewQu
   return <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
     <View style={styles.hero}>
       <View style={styles.heroTop}>
-        {onBack ? <Pressable onPress={onBack} hitSlop={10} style={styles.backButton} accessibilityRole="button" accessibilityLabel="Back to enquiries"><Feather name="arrow-left" size={19} color={colors.textLight} /></Pressable> : null}
+        {onBack ? <Pressable onPress={onBack} hitSlop={10} style={styles.backButton} accessibilityRole="button" accessibilityLabel="Back to enquiries"><Feather name="arrow-left" size={19} color={colors.text} /></Pressable> : null}
         <View style={styles.headerCopy}>
           <Text style={styles.eyebrow}>TRAVEL REQUEST · ENQUIRY DETAILS</Text>
           <Text style={styles.title} numberOfLines={2}>{title}</Text>
@@ -262,24 +262,24 @@ const Detail: React.FC<{icon: string; label: string; value: string; styles: Retu
 const makeStyles = (colors: AppColors) => StyleSheet.create({
   container: {flex: 1, backgroundColor: colors.bg},
   content: {padding: 16, paddingBottom: 36},
-  hero: {padding: 16, marginBottom: 14, borderRadius: 18, backgroundColor: colors.primary, overflow: 'hidden'},
+  hero: {paddingBottom: 15, marginBottom: 14, borderBottomWidth: 1, borderBottomColor: colors.border},
   heroTop: {flexDirection: 'row', alignItems: 'flex-start'},
-  heroFooter: {flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 18},
-  heroMetaLabel: {fontSize: 8, fontWeight: '800', letterSpacing: 0.7, color: '#C7D2FE'},
-  heroMetaValue: {fontSize: 12, fontWeight: '900', color: colors.textLight, marginTop: 4},
-  heroBudget: {maxWidth: '60%', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 9, backgroundColor: 'rgba(255,255,255,0.16)'},
-  heroBudgetValue: {fontSize: 12, fontWeight: '900', color: colors.textLight, marginTop: 4},
-  backButton: {width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.16)', alignItems: 'center', justifyContent: 'center', marginRight: 10},
+  heroFooter: {flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 12},
+  heroMetaLabel: {fontSize: 8, fontWeight: '800', letterSpacing: 0.7, color: colors.textMuted},
+  heroMetaValue: {fontSize: 12, fontWeight: '900', color: colors.text, marginTop: 4},
+  heroBudget: {maxWidth: '60%', alignItems: 'flex-end'},
+  heroBudgetValue: {fontSize: 12, fontWeight: '900', color: colors.text, marginTop: 4},
+  backButton: {width: 36, height: 36, borderRadius: 18, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', marginRight: 10},
   headerCopy: {flex: 1, minWidth: 0},
-  eyebrow: {fontSize: 8, fontWeight: '900', letterSpacing: 0.8, color: '#C7D2FE'},
-  title: {fontSize: 18, fontWeight: '900', color: colors.textLight, marginTop: 4},
+  eyebrow: {fontSize: 8, fontWeight: '900', letterSpacing: 0.8, color: colors.primary},
+  title: {fontSize: 18, fontWeight: '900', color: colors.text, marginTop: 4},
   status: {paddingHorizontal: 8, paddingVertical: 6, borderRadius: 8, marginLeft: 7},
   statusText: {fontSize: 8, fontWeight: '900'},
   statusPending: {backgroundColor: colors.goldLight},
   statusConfirmed: {backgroundColor: colors.successLight},
   pendingText: {color: colors.goldDark},
   confirmedText: {color: colors.success},
-  reference: {fontSize: 10, color: '#E0E7FF', marginTop: 7},
+  reference: {fontSize: 10, color: colors.textMuted, marginTop: 7},
   tabsScroll: {marginHorizontal: -16, marginBottom: 14},
   tabs: {flexDirection: 'row', gap: 8, paddingHorizontal: 16},
   tab: {flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: colors.border, borderRadius: 11, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: colors.card},

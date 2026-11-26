@@ -53,7 +53,7 @@ export const QuotationDetailsScreen: React.FC<Props> = ({quotation, onBack}) => 
       <View style={styles.hero}>
         <View style={styles.heroTop}>
           <Pressable onPress={onBack} hitSlop={10} style={styles.backButton} accessibilityRole="button" accessibilityLabel="Back to quotations">
-            <Feather name="arrow-left" size={19} color={colors.textLight} />
+            <Feather name="arrow-left" size={19} color={colors.text} />
           </Pressable>
           <View style={styles.headerCopy}>
             <Text style={styles.eyebrow}>QUOTATION DETAILS</Text>
@@ -229,22 +229,22 @@ const Detail: React.FC<{label: string; value: unknown; styles: ReturnType<typeof
 const makeStyles = (colors: AppColors) => StyleSheet.create({
   container: {flex: 1, backgroundColor: colors.bg},
   content: {padding: 16, paddingBottom: 36},
-  hero: {padding: 16, marginBottom: 14, borderRadius: 18, backgroundColor: colors.primary, overflow: 'hidden'},
+  hero: {paddingBottom: 15, marginBottom: 14, borderBottomWidth: 1, borderBottomColor: colors.border},
   heroTop: {flexDirection: 'row', alignItems: 'flex-start'},
-  backButton: {width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.16)', alignItems: 'center', justifyContent: 'center', marginRight: 10},
+  backButton: {width: 36, height: 36, borderRadius: 18, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', marginRight: 10},
   headerCopy: {flex: 1, minWidth: 0},
-  eyebrow: {fontSize: 9, fontWeight: '900', letterSpacing: 1, color: '#C7D2FE'},
-  title: {fontSize: 18, fontWeight: '900', color: colors.textLight, marginTop: 4},
-  subtitle: {fontSize: 11, color: '#E0E7FF', marginTop: 4},
-  status: {borderRadius: 9, backgroundColor: 'rgba(255,255,255,0.18)', paddingHorizontal: 8, paddingVertical: 6, marginLeft: 7},
-  statusText: {fontSize: 8, fontWeight: '900', color: colors.textLight},
-  heroFooter: {flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 18},
+  eyebrow: {fontSize: 9, fontWeight: '900', letterSpacing: 1, color: colors.primary},
+  title: {fontSize: 18, fontWeight: '900', color: colors.text, marginTop: 4},
+  subtitle: {fontSize: 11, color: colors.textSecondary, marginTop: 4},
+  status: {borderRadius: 9, backgroundColor: colors.primarySubtle, paddingHorizontal: 8, paddingVertical: 6, marginLeft: 7},
+  statusText: {fontSize: 8, fontWeight: '900', color: colors.primary},
+  heroFooter: {flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 12},
   versionBadge: {paddingVertical: 6, paddingRight: 14},
-  versionLabel: {fontSize: 8, fontWeight: '800', letterSpacing: 0.8, color: '#C7D2FE'},
-  versionValue: {fontSize: 13, fontWeight: '900', color: colors.textLight, marginTop: 3},
-  heroPrice: {minWidth: 132, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 9, backgroundColor: 'rgba(255,255,255,0.16)'},
-  heroPriceLabel: {fontSize: 8, fontWeight: '800', letterSpacing: 0.5, color: '#E0E7FF'},
-  heroPriceValue: {fontSize: 18, fontWeight: '900', color: colors.textLight, marginTop: 3},
+  versionLabel: {fontSize: 8, fontWeight: '800', letterSpacing: 0.8, color: colors.textMuted},
+  versionValue: {fontSize: 13, fontWeight: '900', color: colors.text, marginTop: 3},
+  heroPrice: {minWidth: 132, alignItems: 'flex-end', paddingVertical: 2},
+  heroPriceLabel: {fontSize: 8, fontWeight: '800', letterSpacing: 0.5, color: colors.textMuted},
+  heroPriceValue: {fontSize: 18, fontWeight: '900', color: colors.primary, marginTop: 3},
   tabsScroll: {marginHorizontal: -16, marginBottom: 14},
   tabs: {flexDirection: 'row', gap: 8, paddingHorizontal: 16},
   tab: {flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: colors.border, borderRadius: 11, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: colors.card},

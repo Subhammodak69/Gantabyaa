@@ -185,56 +185,42 @@ export const EnquiryQuotationsScreen: React.FC<Props> = ({enquiry, onBack, onVie
         </View>
       ) : quotations.map(quotation => (
         <View key={quotation.id} style={styles.quotationCard}>
-          <View style={styles.quotationHeader}>
           <Pressable
-            style={styles.quotationHeading}
+            style={styles.quotationRow}
             onPress={() => onViewQuotation?.(quotation)}
             disabled={!onViewQuotation}
             accessibilityRole="button"
             accessibilityLabel={`View details for ${quotation.quotation_code || quotation.tour_name}`}
           >
+            <View style={styles.quotationMain}>
+              <View style={styles.quotationIdentity}>
               <Text style={styles.quotationCode}>{quotation.quotation_code || 'Quotation'}</Text>
-              <Text style={styles.tourName}>{quotation.tour_name || 'Travel quotation'}</Text>
-            {onViewQuotation ? <Text style={styles.detailsLink}>View details</Text> : null}
-          </Pressable>
-            <Text style={styles.status}>{String(quotation.status || 'PENDING').replace(/_/g, ' ')}</Text>
-          </View>
-
-          <View style={styles.dateRow}>
-            <Feather name="calendar" size={14} color={colors.primary} />
-            <Text style={styles.dateText}>
-              {formatDate(quotation.travel_date)}{quotation.return_date ? ` – ${formatDate(quotation.return_date)}` : ''}
-            </Text>
-          </View>
-
-          {quotation.items?.map(item => (
-            <View key={item.id} style={styles.itemRow}>
-              <View style={styles.itemCopy}>
-                <Text style={styles.itemName}>{item.name}</Text>
-                {item.description ? <Text style={styles.itemDescription}>{item.description}</Text> : null}
-                {item.quantity != null ? <Text style={styles.itemQuantity}>Qty: {item.quantity}</Text> : null}
+                <Text style={styles.status}>{String(quotation.status || 'PENDING').replace(/_/g, ' ')}</Text>
               </View>
-              <Text style={styles.itemPrice}>{formatAmount(item.total_price ?? item.unit_price)}</Text>
-            </View>
-          ))}
-
-          <View style={styles.totalRow}>
-            <View>
-              <Text style={styles.validUntil}>Valid until {formatDate(quotation.valid_until)}</Text>
-              {quotation.version ? <Text style={styles.version}>Version {quotation.version}</Text> : null}
+              <Text style={styles.tourName} numberOfLines={1}>{quotation.tour_name || 'Travel quotation'}</Text>
+              <View style={styles.dateRow}>
+                <Feather name="calendar" size={13} color={colors.primary} />
+                <Text style={styles.dateText} numberOfLines={1}>
+                  {formatDate(quotation.travel_date)}{quotation.return_date ? ` – ${formatDate(quotation.return_date)}` : ''}
+                </Text>
+              </View>
+              <View style={styles.quotationMeta}>
+                <Text style={styles.validUntil}>Valid until {formatDate(quotation.valid_until)}</Text>
+                {quotation.version ? <Text style={styles.version}>Version {quotation.version}</Text> : null}
+              </View>
             </View>
             <View style={styles.totalCopy}>
               <Text style={styles.totalLabel}>Total</Text>
               <Text style={styles.totalAmount}>{formatAmount(quotation.total_amount)}</Text>
+              <Feather name="chevron-right" size={17} color={colors.primary} />
             </View>
-          </View>
+          </Pressable>
           {['SENT', 'VIEWED'].includes(String(quotation.status || '').toUpperCase()) ? (
             <View style={styles.actionButtons}>
               <Pressable style={styles.rejectButton} onPress={() => openReject(quotation)} disabled={actionLoading}><Feather name="x-circle" size={16} color={colors.danger} /><Text style={styles.rejectButtonText}>Decline</Text></Pressable>
               <Pressable style={styles.acceptButton} onPress={() => openAccept(quotation)} disabled={actionLoading}><Feather name="check-circle" size={16} color={colors.textLight} /><Text style={styles.acceptButtonText}>Accept quotation</Text></Pressable>
             </View>
           ) : null}
-          {quotation.important_notes ? <Text style={styles.notes}>{quotation.important_notes}</Text> : null}
         </View>
       ))}
 
@@ -291,28 +277,22 @@ const makeStyles = (colors: ReturnType<typeof useColors>) => StyleSheet.create({
   stateText: {fontSize: 12, lineHeight: 18, color: colors.textSecondary, marginTop: 8, textAlign: 'center'},
   retryButton: {marginTop: 14, paddingHorizontal: 18, paddingVertical: 10, borderRadius: 10, backgroundColor: colors.primary},
   retryText: {fontSize: 12, fontWeight: '900', color: colors.textLight},
-  quotationCard: {padding: 15, marginBottom: 13, borderRadius: 15, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border},
-  quotationHeader: {flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: colors.border},
-  quotationHeading: {flex: 1},
+  quotationCard: {paddingVertical: 11, marginBottom: 5, borderBottomWidth: 1, borderBottomColor: colors.border},
+  quotationRow: {flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 2},
+  quotationMain: {flex: 1, minWidth: 0},
+  quotationIdentity: {flexDirection: 'row', alignItems: 'center', gap: 8},
   quotationCode: {fontSize: 10, fontWeight: '900', letterSpacing: 0.7, color: colors.primary},
-  tourName: {fontSize: 16, fontWeight: '900', color: colors.text, marginTop: 4},
-  detailsLink: {fontSize: 11, fontWeight: '900', color: colors.primary, marginTop: 5},
-  status: {fontSize: 9, fontWeight: '900', color: colors.primary, backgroundColor: colors.primarySubtle, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5, overflow: 'hidden'},
-  dateRow: {flexDirection: 'row', alignItems: 'center', gap: 7, paddingVertical: 12},
-  dateText: {fontSize: 11, color: colors.textSecondary},
-  itemRow: {flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.border},
-  itemCopy: {flex: 1},
-  itemName: {fontSize: 12, fontWeight: '800', color: colors.text},
-  itemDescription: {fontSize: 10, color: colors.textSecondary, marginTop: 3},
-  itemQuantity: {fontSize: 10, color: colors.textMuted, marginTop: 3},
-  itemPrice: {fontSize: 12, fontWeight: '800', color: colors.text},
-  totalRow: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 12, marginTop: 3},
+  tourName: {fontSize: 13, fontWeight: '900', color: colors.text, marginTop: 3},
+  status: {fontSize: 8, fontWeight: '900', color: colors.primary, backgroundColor: colors.primarySubtle, borderRadius: 8, paddingHorizontal: 7, paddingVertical: 4, overflow: 'hidden'},
+  dateRow: {flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 5},
+  dateText: {flexShrink: 1, fontSize: 10, color: colors.textSecondary},
+  quotationMeta: {flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 10, marginTop: 4},
   validUntil: {fontSize: 10, color: colors.textMuted},
-  version: {fontSize: 10, color: colors.textMuted, marginTop: 3},
-  totalCopy: {alignItems: 'flex-end'},
-  totalLabel: {fontSize: 9, fontWeight: '800', color: colors.textMuted, textTransform: 'uppercase'},
-  totalAmount: {fontSize: 18, fontWeight: '900', color: colors.primary, marginTop: 2},
-  actionButtons: {flexDirection: 'row', gap: 9, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 12, marginTop: 12},
+  version: {fontSize: 10, color: colors.textMuted},
+  totalCopy: {alignItems: 'flex-end', justifyContent: 'center', gap: 2, marginLeft: 4},
+  totalLabel: {fontSize: 8, fontWeight: '800', color: colors.textMuted, textTransform: 'uppercase'},
+  totalAmount: {fontSize: 15, fontWeight: '900', color: colors.primary},
+  actionButtons: {flexDirection: 'row', gap: 9, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 9, marginTop: 9},
   rejectButton: {flex: 1, minHeight: 44, borderRadius: 11, borderWidth: 1, borderColor: colors.dangerLight, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6, paddingHorizontal: 10},
   rejectButtonText: {fontSize: 12, fontWeight: '900', color: colors.danger},
   acceptButton: {flex: 1, minHeight: 44, borderRadius: 11, backgroundColor: colors.success, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6, paddingHorizontal: 10},

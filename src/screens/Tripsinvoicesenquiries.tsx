@@ -393,15 +393,22 @@ export const MyEnquiriesScreen: React.FC<{ enquiries: EnquiryData[]; loading?: b
       </View>}
       renderItem={({ item, index }) => (
         <View style={styles.enquiry}>
-          <Pressable style={styles.enquiryBodyPress} onPress={() => onViewEnquiry?.(item)}>
+          <Pressable
+            style={styles.enquiryBodyPress}
+            onPress={() => onViewEnquiry?.(item)}
+            disabled={!onViewEnquiry}
+            accessibilityRole="button"
+            accessibilityLabel={`View details for ${item.tourTitle || item.destination || 'enquiry'}`}
+          >
             <View style={styles.listIndex}><Text style={styles.listIndexText}>{String(index + 1).padStart(2, '0')}</Text></View>
             <View style={styles.listCardBody}>
               <View style={styles.row}><Text style={styles.enquiryTitle} numberOfLines={1} ellipsizeMode="tail">{item.tourTitle || item.destination || 'Custom tour'}</Text><Text style={[styles.status, item.status === 'CONFIRMED' ? styles.statusConfirmed : styles.statusNew]} numberOfLines={1}>{item.status || 'NEW'}</Text></View>
               <View style={styles.enquiryMetaRow}><Feather name="calendar" size={12} color={COLORS.textSecondary} /><Text style={styles.meta} numberOfLines={1} ellipsizeMode="tail">{item.travelDate || 'Travel date not selected'}</Text></View>
               {item.message ? <Text style={styles.meta} numberOfLines={1} ellipsizeMode="tail">{item.message}</Text> : null}
-              {item.id ? <View style={styles.referenceRow}><Text style={styles.ref} numberOfLines={1} ellipsizeMode="middle">Reference: {item.id}</Text><Pressable style={styles.copyButton} hitSlop={8} onPress={() => copyReference(item.id as string)}><Feather name="copy" size={14} color={COLORS.primary} /></Pressable></View> : null}
+              {item.id ? <View style={styles.referenceRow}><Text style={styles.ref} numberOfLines={1} ellipsizeMode="middle">Reference: {item.id}</Text></View> : null}
             </View>
           </Pressable>
+          {item.id ? <Pressable style={styles.copyButton} hitSlop={8} onPress={() => copyReference(item.id as string)} accessibilityRole="button" accessibilityLabel="Copy enquiry reference"><Feather name="copy" size={14} color={COLORS.primary} /></Pressable> : null}
         </View>
       )}
     />
@@ -495,8 +502,8 @@ const makeStyles = (COLORS: AppColors) => StyleSheet.create({
   statusConfirmed: { backgroundColor: COLORS.successLight, color: COLORS.success },
   statusNew: { backgroundColor: COLORS.goldLight, color: COLORS.goldDark },
 
-  enquiry: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.card, borderRadius: 13, borderWidth: 1, borderColor: COLORS.border, padding: 8, marginBottom: 8 },
-  enquiryBodyPress: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center' },
+  enquiry: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 2, marginBottom: 8, borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  enquiryBodyPress: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', paddingRight: 8 },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   enquiryTitle: { flex: 1, minWidth: 0, fontSize: 13, fontWeight: '800', color: COLORS.text },
   enquiryMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 5 },
