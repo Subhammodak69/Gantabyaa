@@ -69,14 +69,6 @@ export interface DestinationRecord {
   is_featured: boolean;
 }
 
-export interface VehicleRecord {
-  id: string;
-  name: string;
-  vehicle_type?: string;
-  registration_number?: string;
-  capacity?: number;
-}
-
 export interface AuthUser {
   id: string;
   name: string;

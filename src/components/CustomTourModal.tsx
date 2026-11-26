@@ -14,7 +14,7 @@ import {
 import { useColors } from '../theme/theme';
 import { useAppDialog } from './AppDialog';
 import { CustomDateField } from './CustomDatePicker';
-import { fetchTourPackages, fetchVehicles, openWhatsAppChat } from '../api/tourApi';
+import { fetchTourPackages, openWhatsAppChat } from '../api/tourApi';
 import enums from '../utils/enums.json';
 
 interface CustomTourModalProps {
@@ -86,8 +86,7 @@ export const CustomTourModal: React.FC<CustomTourModalProps> = ({
   const [destinationId, setDestinationId] = useState('');
   const [packageId, setPackageId] = useState('');
   const [packages, setPackages] = useState<any[]>([]);
-  const [vehicleId, setVehicleId] = useState('');
-  const [vehicles, setVehicles] = useState<any[]>([]);
+  const [preferredVehicle, setPreferredVehicle] = useState('');
   const [travelDate, setTravelDate] = useState('');
   const [travelDuration, setTravelDuration] = useState('');
   const [paxNo, setPaxNo] = useState('2');
@@ -98,8 +97,6 @@ export const CustomTourModal: React.FC<CustomTourModalProps> = ({
   const [enquiryType, setEnquiryType] = useState('CUSTOM_TOUR');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const selectedPackage = packages.find(item => item.id === packageId || item.package_id === packageId);
-  const selectedVehicle = vehicles.find(item => item.id === vehicleId);
-
   useEffect(() => {
     if (!visible) return;
     fetchTourPackages(1, 50)
@@ -107,25 +104,13 @@ export const CustomTourModal: React.FC<CustomTourModalProps> = ({
       .catch(() => setPackages([]));
   }, [visible]);
 
-  useEffect(() => {
-    if (!visible || !destinationId) {
-      setVehicles([]);
-      return;
-    }
-    fetchVehicles(1, 20)
-      .then(vehicleResponse => setVehicles(Array.isArray(vehicleResponse.data) ? vehicleResponse.data : []))
-      .catch(() => {
-        setVehicles([]);
-      })
-  }, [visible, destinationId]);
-
   const resetForm = () => {
     setName('');
     setMobile('');
     setDestination('');
     setDestinationId('');
     setPackageId('');
-    setVehicleId('');
+    setPreferredVehicle('');
     setTravelDate('');
     setTravelDuration('');
     setPaxNo('2');
@@ -171,7 +156,7 @@ export const CustomTourModal: React.FC<CustomTourModalProps> = ({
         `Travellers: ${paxNo || 0}`,
         `Rooms: ${noRoom || 0}`,
         `Vehicle type: ${vehicleType || 'ANY'}`,
-        `Vehicle: ${selectedVehicle?.name || selectedVehicle?.vehicle_name || vehicleId || 'Not selected'}`,
+        `Vehicle: ${preferredVehicle.trim() || 'Not selected'}`,
         `Meal plan: ${mealPlan || 'ANY'}`,
         `Special requirements: ${specialRequirements.trim() || 'None'}`,
         '',
@@ -377,11 +362,12 @@ export const CustomTourModal: React.FC<CustomTourModalProps> = ({
             />
 
             <Text style={styles.label}>PREFERRED VEHICLE</Text>
-            <ChipSelector
-              options={[{ label: 'Any', value: '' }, ...vehicles.map(vehicle => ({ label: `${vehicle.name}${vehicle.capacity ? ` · ${vehicle.capacity} seats` : ''}`, value: vehicle.id }))]}
-              value={vehicleId}
-              onChange={setVehicleId}
-              styles={styles}
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. Sedan, SUV or Innova"
+              placeholderTextColor={COLORS.textMuted}
+              value={preferredVehicle}
+              onChangeText={setPreferredVehicle}
             />
 
             {/* Meal Plan */}

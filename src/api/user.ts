@@ -18,7 +18,6 @@ import {
   BookingTravellerInput,
   EnquiryCreateInput,
   HotelRecord,
-  VehicleRecord,
   Quotation,
   WalletBalance,
   FinancialTransaction,
@@ -72,18 +71,6 @@ export async function fetchHotels(
   if (destinationId) params.set('destination_id', destinationId);
   if (category) params.set('category', category);
   return request<ApiEnvelope<HotelRecord[]>>(`/api/v1/hotels?${params.toString()}`);
-}
-
-export async function fetchVehicles(
-  page = 1,
-  pageSize = 20,
-  vehicleType = '',
-  search = ''
-): Promise<ApiEnvelope<VehicleRecord[]>> {
-  const params = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
-  if (vehicleType) params.set('vehicle_type', vehicleType);
-  if (search) params.set('search', search);
-  return request<ApiEnvelope<VehicleRecord[]>>(`/api/v1/vehicles?${params.toString()}`);
 }
 
 // ── Wishlist ───────────────────────────────────────────────────────────
