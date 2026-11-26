@@ -17,7 +17,6 @@ import {
   BookingTraveller,
   BookingTravellerInput,
   EnquiryCreateInput,
-  EnquiryUpdateInput,
   HotelRecord,
   VehicleRecord,
   Quotation,
@@ -60,22 +59,6 @@ export async function createEnquiry(payload: EnquiryCreateInput): Promise<ApiEnv
   return request<ApiEnvelope<EnquiryRecord>>('/api/v1/enquiries', {
     method: 'POST',
     body: JSON.stringify(payload),
-  });
-}
-
-export async function updateEnquiry(
-  id: string,
-  payload: EnquiryUpdateInput
-): Promise<ApiEnvelope<EnquiryRecord>> {
-  return authenticated<ApiEnvelope<EnquiryRecord>>(`/api/v1/enquiries/${encodeURIComponent(id)}`, {
-    method: 'PATCH',
-    body: JSON.stringify(payload),
-  });
-}
-
-export async function deleteEnquiry(id: string): Promise<ApiEnvelope<unknown>> {
-  return authenticated<ApiEnvelope<unknown>>(`/api/v1/enquiries/${encodeURIComponent(id)}`, {
-    method: 'DELETE',
   });
 }
 

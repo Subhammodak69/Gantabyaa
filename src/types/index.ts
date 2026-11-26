@@ -192,7 +192,6 @@ export type NavScreen =
   | 'notification_settings'
   | 'my_trips'
   | 'my_enquiries'
-  | 'edit_enquiry'
   | 'enquiry_details'
   | 'enquiry_quotations'
   | 'bills_invoices'

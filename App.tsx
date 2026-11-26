@@ -42,7 +42,6 @@ import { WishlistScreen } from './src/screens/WishlistScreen';
 import { ReferralsScreen } from './src/screens/ReferralsScreen';
 import { MyTripsScreen, MyEnquiriesScreen, BillsInvoicesScreen } from './src/screens/Tripsinvoicesenquiries';
 import { InvoiceDetailsScreen } from './src/screens/InvoiceDetailsScreen';
-import { EditEnquiryScreen } from './src/screens/EditEnquiryScreen';
 import { EnquiryDetailsScreen } from './src/screens/EnquiryDetailsScreen';
 import { EnquiryQuotationsScreen } from './src/screens/EnquiryQuotationsScreen';
 import { BookingDetailsScreen } from './src/screens/BookingDetailsScreen';
@@ -552,7 +551,6 @@ function AppInner() {
   };
 
   const openEnquiryDetails = (enquiry: EnquiryData) => { setSelectedEnquiry(enquiry); navigateTo('enquiry_details'); };
-  const openEnquiryEditor = (enquiry: EnquiryData) => { setSelectedEnquiry(enquiry); navigateTo('edit_enquiry'); };
   const openBookingDetails = (booking: import('./src/api/tourApi').CustomerTour) => { setSelectedBooking(booking); navigateTo('booking_details'); };
   const openInvoiceDetails = (invoice: import('./src/api/tourApi').Invoice) => { setSelectedInvoice(invoice); navigateTo('invoice_details'); };
 
@@ -591,7 +589,7 @@ function AppInner() {
     setRootScreen('auth');
   };
 
-  const protectedScreens: NavScreen[] = ['profile', 'profile_details', 'edit_profile', 'sessions', 'my_trips', 'my_enquiries', 'edit_enquiry', 'enquiry_details', 'bills_invoices', 'invoice_details', 'booking_details', 'documents', 'document_viewer', 'wishlist', 'referrals', 'notifications', 'points'];
+  const protectedScreens: NavScreen[] = ['profile', 'profile_details', 'edit_profile', 'sessions', 'my_trips', 'my_enquiries', 'enquiry_details', 'bills_invoices', 'invoice_details', 'booking_details', 'documents', 'document_viewer', 'wishlist', 'referrals', 'notifications', 'points'];
   const navigateWithAuth = (screen: NavScreen) => {
     if (protectedScreens.includes(screen) && !isLoggedIn) { navigateTo('auth'); return; }
     navigateTo(screen);
@@ -755,16 +753,13 @@ function AppInner() {
         return <MyTripsScreen onOpenBooking={openBookingDetails} />;
 
       case 'my_enquiries':
-        return <MyEnquiriesScreen enquiries={enquiries} loading={loadingEnquiries} onRefresh={loadEnquiries} onViewEnquiry={openEnquiryDetails} onEditEnquiry={openEnquiryEditor} />;
-
-      case 'edit_enquiry':
-        return selectedEnquiry ? <EditEnquiryScreen enquiry={selectedEnquiry} onSaved={() => { setSelectedEnquiry(null); loadEnquiries(); setRootScreen('my_enquiries'); }} /> : <MyEnquiriesScreen enquiries={enquiries} loading={loadingEnquiries} onRefresh={loadEnquiries} onViewEnquiry={openEnquiryDetails} onEditEnquiry={openEnquiryEditor} />;
+        return <MyEnquiriesScreen enquiries={enquiries} loading={loadingEnquiries} onRefresh={loadEnquiries} onViewEnquiry={openEnquiryDetails} />;
 
       case 'enquiry_details':
-        return selectedEnquiry ? <EnquiryDetailsScreen enquiry={selectedEnquiry} onBack={goBack} onEdit={() => navigateTo('edit_enquiry')} onViewQuotations={selectedEnquiry.id ? () => navigateTo('enquiry_quotations') : undefined} /> : <MyEnquiriesScreen enquiries={enquiries} loading={loadingEnquiries} onRefresh={loadEnquiries} onViewEnquiry={openEnquiryDetails} onEditEnquiry={openEnquiryEditor} />;
+        return selectedEnquiry ? <EnquiryDetailsScreen enquiry={selectedEnquiry} onBack={goBack} onViewQuotations={selectedEnquiry.id ? () => navigateTo('enquiry_quotations') : undefined} /> : <MyEnquiriesScreen enquiries={enquiries} loading={loadingEnquiries} onRefresh={loadEnquiries} onViewEnquiry={openEnquiryDetails} />;
 
       case 'enquiry_quotations':
-        return selectedEnquiry ? <EnquiryQuotationsScreen enquiry={selectedEnquiry} onBack={goBack} /> : <MyEnquiriesScreen enquiries={enquiries} loading={loadingEnquiries} onRefresh={loadEnquiries} onViewEnquiry={openEnquiryDetails} onEditEnquiry={openEnquiryEditor} />;
+        return selectedEnquiry ? <EnquiryQuotationsScreen enquiry={selectedEnquiry} onBack={goBack} /> : <MyEnquiriesScreen enquiries={enquiries} loading={loadingEnquiries} onRefresh={loadEnquiries} onViewEnquiry={openEnquiryDetails} />;
 
       case 'bills_invoices':
         return <BillsInvoicesScreen onOpenInvoice={openInvoiceDetails} />;

@@ -206,8 +206,6 @@ export interface EnquiryCreateInput {
   meal_plan?: string;
 }
 
-export type EnquiryUpdateInput = Partial<Omit<EnquiryCreateInput, 'enquiry_type' | 'visitor_id' | 'customer_id' | 'channel'>>;
-
 export interface Trip {
   id: string;
   enquiry_code?: string;

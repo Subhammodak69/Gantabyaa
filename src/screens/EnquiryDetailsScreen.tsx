@@ -8,7 +8,6 @@ import {SeasonVariant, TourPackageSummary} from '../types';
 
 interface Props {
   enquiry: EnquiryData;
-  onEdit?: () => void;
   onBack?: () => void;
   onViewQuotations?: () => void;
 }
@@ -67,7 +66,7 @@ const formatDuration = (enquiry: object): string => {
   return parts.length ? parts.join(' · ') : fieldValue(enquiry, 'travel_duration', 'duration');
 };
 
-export const EnquiryDetailsScreen: React.FC<Props> = ({enquiry, onEdit, onBack, onViewQuotations}) => {
+export const EnquiryDetailsScreen: React.FC<Props> = ({enquiry, onBack, onViewQuotations}) => {
   const colors = useColors();
   const styles = makeStyles(colors);
   const [packageTitle, setPackageTitle] = useState('');
@@ -209,7 +208,6 @@ export const EnquiryDetailsScreen: React.FC<Props> = ({enquiry, onEdit, onBack, 
     {lookupsLoading ? <Text style={styles.lookupNotice}>Loading package and variant names…</Text> : null}
     {lookupError ? <Text style={styles.lookupError}>{lookupError}</Text> : null}
     {onViewQuotations ? <Pressable style={styles.quotationsButton} onPress={onViewQuotations}><Feather name="file-text" size={17} color={colors.primary} /><Text style={styles.quotationsText}>View quotations</Text><Feather name="arrow-right" size={16} color={colors.primary} /></Pressable> : null}
-    {onEdit ? <Pressable style={styles.editButton} onPress={onEdit}><Feather name="edit-2" size={17} color={colors.textLight} /><Text style={styles.editText}>Edit enquiry</Text></Pressable> : null}
   </ScrollView>;
 };
 
@@ -241,6 +239,4 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   lookupError: {fontSize: 11, lineHeight: 16, color: colors.danger, textAlign: 'center', marginBottom: 12},
   quotationsButton: {height: 48, borderRadius: 12, borderWidth: 1, borderColor: colors.primary, backgroundColor: colors.card, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9, marginBottom: 10},
   quotationsText: {fontSize: 13, fontWeight: '900', color: colors.primary},
-  editButton: {height: 48, borderRadius: 12, backgroundColor: colors.primary, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8},
-  editText: {fontSize: 13, fontWeight: '900', color: colors.textLight},
 });
