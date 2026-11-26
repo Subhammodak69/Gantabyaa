@@ -587,6 +587,7 @@ function AppInner() {
     setUser(null);
     setSavedTours([]);
     setEnquiries([]);
+    setSelectedQuotation(null);
     identifiedCustomerRef.current = null;
     setDrawerVisible(false);
     setRootScreen('auth');
