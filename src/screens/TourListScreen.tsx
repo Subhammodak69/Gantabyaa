@@ -4,11 +4,11 @@ import {
   Text,
   StyleSheet,
   FlatList,
-  ScrollView,
   TextInput,
   Pressable,
   RefreshControl,
 } from 'react-native';
+import { ScrollView } from '../components/ScrollView';
 import { useColors } from '../theme/theme';
 import { TourPackageSummary, NavScreen } from '../types';
 import { TourCard } from '../components/TourCard';

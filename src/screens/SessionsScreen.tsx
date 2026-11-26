@@ -1,5 +1,6 @@
 import React, {useCallback, useEffect, useState} from 'react';
-import {ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View} from 'react-native';
+import {ActivityIndicator, Pressable, RefreshControl, StyleSheet, Text, View} from 'react-native';
+import {ScrollView} from '../components/ScrollView';
 import {deleteSession, fetchSessions, logoutAllSessions} from '../api/tourApi';
 import {AppColors, useColors} from '../theme/theme';
 import {NavScreen} from '../types';

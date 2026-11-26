@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   Image,
   Pressable,
   Share,
@@ -12,6 +11,7 @@ import {
   ActivityIndicator,
   Modal,
 } from 'react-native';
+import { ScrollView } from '../components/ScrollView';
 import { useColors } from '../theme/theme';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import Video from 'react-native-video';

@@ -2,11 +2,11 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   Pressable,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { ScrollView } from '../components/ScrollView';
 import Feather from 'react-native-vector-icons/Feather';
 import { fetchAccountPoints } from '../api/tourApi';
 import { AccountPoints, PointsTransaction } from '../api/types';

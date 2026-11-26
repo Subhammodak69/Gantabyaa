@@ -6,11 +6,11 @@ import {
   Modal,
   TextInput,
   Pressable,
-  ScrollView,
   ActivityIndicator,
   Platform,
   KeyboardAvoidingView,
 } from 'react-native';
+import { ScrollView } from './ScrollView';
 import { useColors } from '../theme/theme';
 import { useAppDialog } from './AppDialog';
 import { CustomDateField } from './CustomDatePicker';

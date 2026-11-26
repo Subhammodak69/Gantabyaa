@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, ReactNode } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { RefreshControl, StyleSheet, Switch, Text, View } from 'react-native';
+import { ScrollView } from '../components/ScrollView';
 import Feather from 'react-native-vector-icons/Feather';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import { AppColors, useColors } from '../theme/theme';

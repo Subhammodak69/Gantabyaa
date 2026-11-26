@@ -1,5 +1,6 @@
 import React, {useEffect, useState} from 'react';
-import {Modal, Pressable, RefreshControl, ScrollView, Share, StyleSheet, Text, View} from 'react-native';
+import {Modal, Pressable, RefreshControl, Share, StyleSheet, Text, View} from 'react-native';
+import {ScrollView} from '../components/ScrollView';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
 import {fetchReferralCode, fetchReferrals} from '../api/tourApi';

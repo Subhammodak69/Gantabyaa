@@ -4,10 +4,10 @@ import {
   Text,
   StyleSheet,
   Pressable,
-  ScrollView,
   Animated,
   Dimensions,
 } from 'react-native';
+import { ScrollView } from './ScrollView';
 import { useColors } from '../theme/theme';
 import { NavScreen } from '../types';
 import { openWhatsAppChat } from '../api/tourApi';

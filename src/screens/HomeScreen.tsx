@@ -3,11 +3,11 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   Image,
   Pressable,
   RefreshControl,
 } from 'react-native';
+import { ScrollView } from '../components/ScrollView';
 import { useTheme } from '../theme/theme';
 import { TourPackageSummary, NavScreen } from '../types';
 import { TourCard } from '../components/TourCard';

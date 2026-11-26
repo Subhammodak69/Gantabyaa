@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TextInput,
   Pressable,
   ActivityIndicator,
@@ -15,6 +14,7 @@ import {
   PanResponder,
   Platform,
 } from 'react-native';
+import { ScrollView } from '../components/ScrollView';
 import { BlurView } from '@react-native-community/blur';
 import Feather from 'react-native-vector-icons/Feather';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';

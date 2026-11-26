@@ -7,11 +7,11 @@ import {
   StatusBar,
   View,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
 } from 'react-native';
+import { ScrollView } from '../components/ScrollView';
 import { useTheme } from '../theme/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GoogleSignin, isErrorWithCode, statusCodes } from '@react-native-google-signin/google-signin';

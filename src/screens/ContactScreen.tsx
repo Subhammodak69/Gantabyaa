@@ -1,5 +1,6 @@
 import React from 'react';
-import {Linking, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
+import {Linking, Pressable, StyleSheet, Text, View} from 'react-native';
+import {ScrollView} from '../components/ScrollView';
 import Feather from 'react-native-vector-icons/Feather';
 import CONTACTS from '../config/contacts.json';
 import {AppColors, useColors} from '../theme/theme';

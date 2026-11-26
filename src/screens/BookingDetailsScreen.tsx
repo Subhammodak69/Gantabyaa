@@ -1,5 +1,6 @@
 import React, {useEffect, useState} from 'react';
-import {ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
+import {ActivityIndicator, Pressable, StyleSheet, Text, View} from 'react-native';
+import {ScrollView} from '../components/ScrollView';
 import Feather from 'react-native-vector-icons/Feather';
 import {CustomerTour, fetchBookingDocuments, fetchCustomerTour} from '../api/tourApi';
 import {AppColors, useColors} from '../theme/theme';

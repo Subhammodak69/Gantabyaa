@@ -3,12 +3,12 @@ import {
   ActivityIndicator,
   Image,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import { ScrollView } from '../components/ScrollView';
 import { AuthUser, updateMe, uploadFileApi } from '../api/tourApi';
 import { useColors } from '../theme/theme';
 import { NavScreen } from '../types';

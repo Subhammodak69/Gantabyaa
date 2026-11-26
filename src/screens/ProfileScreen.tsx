@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Pressable,
-  ScrollView,
   RefreshControl,
   StyleSheet,
   Text,
   View,
   Image,
 } from 'react-native';
+import { ScrollView } from '../components/ScrollView';
 import Feather from 'react-native-vector-icons/Feather';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/theme';

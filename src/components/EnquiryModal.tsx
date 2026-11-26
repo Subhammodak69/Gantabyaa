@@ -6,12 +6,12 @@ import {
   Modal,
   TextInput,
   Pressable,
-  ScrollView,
   Image,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { ScrollView } from './ScrollView';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
 import { useColors } from '../theme/theme';

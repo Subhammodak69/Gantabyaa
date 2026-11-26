@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { ScrollView } from '../components/ScrollView';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { DestinationRecord } from '../api/types';
 import { fetchTourPackages } from '../api/tourApi';

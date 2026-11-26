@@ -1,5 +1,6 @@
 import React, {useEffect, useState} from 'react';
-import {ScrollView, StyleSheet, Text, View, Pressable} from 'react-native';
+import {StyleSheet, Text, View, Pressable} from 'react-native';
+import {ScrollView} from '../components/ScrollView';
 import Feather from 'react-native-vector-icons/Feather';
 import {AppColors, useColors} from '../theme/theme';
 import {EnquiryData} from '../types';

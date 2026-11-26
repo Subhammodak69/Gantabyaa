@@ -1,5 +1,6 @@
 import React, {useCallback, useEffect, useState} from 'react';
-import {ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View} from 'react-native';
+import {ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View} from 'react-native';
+import {ScrollView} from '../components/ScrollView';
 import Feather from 'react-native-vector-icons/Feather';
 import {BookingTravellerInput, Quotation} from '../api/types';
 import {acceptQuotation, fetchEnquiryQuotations, rejectQuotation} from '../api/tourApi';

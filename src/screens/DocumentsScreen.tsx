@@ -1,5 +1,6 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react';
-import {ActivityIndicator, Alert, FlatList, Image, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View} from 'react-native';
+import {ActivityIndicator, Alert, FlatList, Image, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, StyleSheet, Text, TextInput, View} from 'react-native';
+import {ScrollView} from '../components/ScrollView';
 import {errorCodes, isErrorWithCode, pick, saveDocuments, types} from '@react-native-documents/picker';
 import RNBlobUtil from 'react-native-blob-util';
 import Ionicons from 'react-native-vector-icons/Ionicons';

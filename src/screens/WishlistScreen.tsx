@@ -1,5 +1,6 @@
 import React from 'react';
-import {RefreshControl, ScrollView, StyleSheet, Text, View} from 'react-native';
+import {RefreshControl, StyleSheet, Text, View} from 'react-native';
+import {ScrollView} from '../components/ScrollView';
 import {TourCard} from '../components/TourCard';
 import {AppColors, useColors} from '../theme/theme';
 import {TourPackageSummary} from '../types';

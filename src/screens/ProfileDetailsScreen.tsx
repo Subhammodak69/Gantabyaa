@@ -7,12 +7,12 @@ import {
   Platform,
   Pressable,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import { ScrollView } from '../components/ScrollView';
 import Feather from 'react-native-vector-icons/Feather';
 import { AuthUser, deleteAccount, logoutAllSessions, requestOtp } from '../api/tourApi';
 import { useTheme } from '../theme/theme';
