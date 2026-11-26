@@ -213,8 +213,8 @@ export const QuotationDetailsScreen: React.FC<Props> = ({quotation, onBack}) => 
 };
 
 const Section: React.FC<{title: string; styles: ReturnType<typeof makeStyles>; accent: string; children: React.ReactNode}> = ({title, styles, accent, children}) => (
-  <View style={[styles.section, {borderLeftColor: accent}]}>
-    <Text style={styles.sectionTitle}>{title}</Text>
+  <View style={styles.section}>
+    <Text style={[styles.sectionTitle, {color: accent}]}>{title}</Text>
     {children}
   </View>
 );
@@ -252,15 +252,15 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   activeTabText: {color: '#FFFFFF'},
   tabCount: {minWidth: 18, overflow: 'hidden', textAlign: 'center', fontSize: 9, fontWeight: '900', color: colors.textSecondary, backgroundColor: colors.surface, borderRadius: 9, paddingHorizontal: 5, paddingVertical: 2},
   activeTabCount: {color: '#FFFFFF', backgroundColor: 'rgba(255,255,255,0.2)'},
-  section: {padding: 15, marginBottom: 13, borderRadius: 15, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderLeftWidth: 4},
-  sectionTitle: {fontSize: 15, fontWeight: '900', color: colors.text, marginBottom: 8},
+  section: {marginBottom: 12, paddingBottom: 5},
+  sectionTitle: {fontSize: 15, fontWeight: '900', marginBottom: 5},
   priceGrid: {flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between'},
   priceTile: {width: '48%', minHeight: 95, justifyContent: 'center', borderWidth: 1, borderRadius: 15, padding: 14, marginBottom: 10},
   priceLabel: {fontSize: 11, fontWeight: '800'},
   priceValue: {fontSize: 18, fontWeight: '900', marginTop: 8},
-  detail: {paddingVertical: 7, borderTopWidth: 1, borderTopColor: colors.border},
-  detailLabel: {fontSize: 10, fontWeight: '700', color: colors.textMuted},
-  detailValue: {fontSize: 12, lineHeight: 18, fontWeight: '700', color: colors.text, marginTop: 3},
+  detail: {flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.border},
+  detailLabel: {width: '38%', fontSize: 11, fontWeight: '700', color: colors.textMuted},
+  detailValue: {flex: 1, fontSize: 12, lineHeight: 18, fontWeight: '700', color: colors.text, textAlign: 'right'},
   record: {paddingTop: 11, marginTop: 3, borderTopWidth: 1, borderTopColor: colors.border},
   recordTitle: {fontSize: 13, fontWeight: '900', color: colors.text, marginBottom: 3},
   description: {fontSize: 12, lineHeight: 18, color: colors.textSecondary, marginTop: 5},

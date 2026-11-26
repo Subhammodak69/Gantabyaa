@@ -256,8 +256,8 @@ export const EnquiryDetailsScreen: React.FC<Props> = ({enquiry, onBack, onViewQu
   </ScrollView>;
 };
 
-const Section: React.FC<{title: string; styles: ReturnType<typeof makeStyles>; accent: string; children: React.ReactNode}> = ({title, styles, accent, children}) => <View style={[styles.section, {borderLeftColor: accent}]}><Text style={styles.sectionTitle}>{title}</Text><View style={styles.card}>{children}</View></View>;
-const Detail: React.FC<{icon: string; label: string; value: string; styles: ReturnType<typeof makeStyles>; colors: AppColors}> = ({icon, label, value, styles, colors}) => <View style={styles.detail}><View style={styles.detailIcon}><Feather name={icon} size={15} color={colors.primary} /></View><View style={styles.detailCopy}><Text style={styles.detailLabel}>{label}</Text><Text style={styles.detailValue}>{value}</Text></View></View>;
+const Section: React.FC<{title: string; styles: ReturnType<typeof makeStyles>; accent: string; children: React.ReactNode}> = ({title, styles, accent, children}) => <View style={styles.section}><Text style={[styles.sectionTitle, {color: accent}]}>{title}</Text>{children}</View>;
+const Detail: React.FC<{icon: string; label: string; value: string; styles: ReturnType<typeof makeStyles>; colors: AppColors}> = ({icon, label, value, styles, colors}) => <View style={styles.detail}><Feather name={icon} size={14} color={colors.primary} style={styles.detailIcon} /><Text style={styles.detailLabel}>{label}</Text><Text style={styles.detailValue}>{value}</Text></View>;
 
 const makeStyles = (colors: AppColors) => StyleSheet.create({
   container: {flex: 1, backgroundColor: colors.bg},
@@ -285,14 +285,12 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   tab: {flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: colors.border, borderRadius: 11, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: colors.card},
   tabText: {fontSize: 11, fontWeight: '800', color: colors.textSecondary},
   activeTabText: {color: '#FFFFFF'},
-  section: {marginBottom: 17, padding: 14, borderRadius: 15, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderLeftWidth: 4},
-  sectionTitle: {fontSize: 12, fontWeight: '900', color: colors.text, textTransform: 'uppercase', letterSpacing: 0.7, marginBottom: 8},
-  card: {backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 15, paddingHorizontal: 14},
-  detail: {flexDirection: 'row', alignItems: 'center', minHeight: 62, borderBottomWidth: 1, borderBottomColor: colors.border},
-  detailIcon: {width: 32, height: 32, borderRadius: 10, backgroundColor: colors.primarySubtle, alignItems: 'center', justifyContent: 'center', marginRight: 11},
-  detailCopy: {flex: 1},
-  detailLabel: {fontSize: 10, color: colors.textMuted, fontWeight: '800', textTransform: 'uppercase'},
-  detailValue: {fontSize: 13, color: colors.text, fontWeight: '700', marginTop: 4},
+  section: {marginBottom: 15, paddingBottom: 4},
+  sectionTitle: {fontSize: 12, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.7, marginBottom: 5},
+  detail: {flexDirection: 'row', alignItems: 'center', minHeight: 48, borderTopWidth: 1, borderTopColor: colors.border, paddingVertical: 8},
+  detailIcon: {marginRight: 8},
+  detailLabel: {width: '34%', fontSize: 10, color: colors.textMuted, fontWeight: '800'},
+  detailValue: {flex: 1, fontSize: 12, lineHeight: 17, color: colors.text, fontWeight: '700', textAlign: 'right'},
   lookupNotice: {fontSize: 11, color: colors.textMuted, textAlign: 'center', marginBottom: 12, padding: 11, borderRadius: 10, backgroundColor: colors.surface},
   lookupError: {fontSize: 11, lineHeight: 16, color: colors.danger, textAlign: 'center', marginBottom: 12, padding: 11, borderRadius: 10, backgroundColor: colors.dangerLight},
   quotationsButton: {height: 48, borderRadius: 12, borderWidth: 1, borderColor: colors.primary, backgroundColor: colors.primarySubtle, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9, marginBottom: 10},
