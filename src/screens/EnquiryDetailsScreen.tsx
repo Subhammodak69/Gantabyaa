@@ -68,7 +68,6 @@ const formatDuration = (enquiry: object): string => {
 };
 
 type EnquiryTab = 'contact' | 'travel' | 'travelers' | 'message' | 'activity';
-type FeatherName = React.ComponentProps<typeof Feather>['name'];
 
 export const EnquiryDetailsScreen: React.FC<Props> = ({enquiry, onBack, onViewQuotations}) => {
   const colors = useColors();
@@ -163,12 +162,12 @@ export const EnquiryDetailsScreen: React.FC<Props> = ({enquiry, onBack, onViewQu
     ? 'Not provided'
     : `${formatBudget(minBudget)} – ${formatBudget(maxBudget)}`;
   const isConfirmed = status === 'CONFIRMED' || status === 'CONVERTED';
-  const tabs: {id: EnquiryTab; label: string; icon: FeatherName; accent: string}[] = [
-    {id: 'contact', label: 'Contact', icon: 'user', accent: '#4F46E5'},
-    {id: 'travel', label: 'Travel', icon: 'map-pin', accent: '#0891B2'},
-    {id: 'travelers', label: 'Travelers', icon: 'users', accent: '#059669'},
-    {id: 'message', label: 'Message', icon: 'message-square', accent: '#E11D48'},
-    {id: 'activity', label: 'Activity', icon: 'clock', accent: '#D97706'},
+  const tabs: {id: EnquiryTab; label: string; accent: string}[] = [
+    {id: 'contact', label: 'Contact', accent: '#4F46E5'},
+    {id: 'travel', label: 'Travel', accent: '#0891B2'},
+    {id: 'travelers', label: 'Travelers', accent: '#059669'},
+    {id: 'message', label: 'Message', accent: '#E11D48'},
+    {id: 'activity', label: 'Activity', accent: '#D97706'},
   ];
 
   return <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -199,8 +198,7 @@ export const EnquiryDetailsScreen: React.FC<Props> = ({enquiry, onBack, onViewQu
     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabsScroll} contentContainerStyle={styles.tabs}>
       {tabs.map(tab => {
         const selected = activeTab === tab.id;
-        return <Pressable key={tab.id} onPress={() => setActiveTab(tab.id)} style={[styles.tab, selected ? {backgroundColor: tab.accent, borderColor: tab.accent} : null]} accessibilityRole="tab" accessibilityState={{selected}}>
-          <Feather name={tab.icon} size={15} color={selected ? '#FFFFFF' : colors.textSecondary} />
+        return <Pressable key={tab.id} onPress={() => setActiveTab(tab.id)} style={[styles.tab, selected && styles.activeTab]} accessibilityRole="tab" accessibilityState={{selected}}>
           <Text style={[styles.tabText, selected && styles.activeTabText]}>{tab.label}</Text>
         </Pressable>;
       })}
@@ -281,11 +279,12 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   pendingText: {color: colors.goldDark},
   confirmedText: {color: colors.success},
   reference: {fontSize: 10, color: colors.textMuted, marginTop: 7},
-  tabsScroll: {marginHorizontal: -16, marginBottom: 14},
-  tabs: {flexDirection: 'row', gap: 8, paddingHorizontal: 16},
-  tab: {flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: colors.border, borderRadius: 11, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: colors.card},
+  tabsScroll: {marginHorizontal: -16, marginBottom: 14, borderBottomWidth: 1, borderBottomColor: colors.border},
+  tabs: {flexDirection: 'row', gap: 16, paddingHorizontal: 16},
+  tab: {flexDirection: 'row', alignItems: 'center', gap: 6, borderBottomWidth: 2, borderBottomColor: 'transparent', paddingHorizontal: 5, paddingVertical: 12},
+  activeTab: {borderBottomColor: colors.primary},
   tabText: {fontSize: 11, fontWeight: '800', color: colors.textSecondary},
-  activeTabText: {color: '#FFFFFF'},
+  activeTabText: {color: colors.primary},
   section: {marginBottom: 15, paddingBottom: 4},
   sectionTitle: {fontSize: 12, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.7, marginBottom: 5},
   detail: {flexDirection: 'row', alignItems: 'center', minHeight: 48, borderTopWidth: 1, borderTopColor: colors.border, paddingVertical: 8},

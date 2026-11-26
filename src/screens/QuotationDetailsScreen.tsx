@@ -1,5 +1,6 @@
 import React from 'react';
-import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
+import {Pressable, StyleSheet, Text, View} from 'react-native';
+import {ScrollView} from '../components/ScrollView';
 import Feather from 'react-native-vector-icons/Feather';
 import {Quotation} from '../api/types';
 import {AppColors, useColors} from '../theme/theme';
@@ -30,21 +31,20 @@ const displayValue = (value: unknown): string => {
 };
 
 type DetailsTab = 'overview' | 'pricing' | 'items' | 'hotels' | 'transport' | 'itinerary' | 'notes';
-type FeatherName = React.ComponentProps<typeof Feather>['name'];
 
 export const QuotationDetailsScreen: React.FC<Props> = ({quotation, onBack}) => {
   const colors = useColors();
   const styles = makeStyles(colors);
   const [activeTab, setActiveTab] = React.useState<DetailsTab>('overview');
   React.useEffect(() => setActiveTab('overview'), [quotation.quotation_code]);
-  const tabs: {id: DetailsTab; label: string; icon: FeatherName; count?: number; accent: string}[] = [
-    {id: 'overview', label: 'Overview', icon: 'compass', accent: '#4F46E5'},
-    {id: 'pricing', label: 'Pricing', icon: 'credit-card', accent: '#059669'},
-    {id: 'items', label: 'Items', icon: 'file-text', count: quotation.items?.length || 0, accent: '#0891B2'},
-    {id: 'hotels', label: 'Hotels', icon: 'home', count: quotation.hotels?.length || 0, accent: '#D97706'},
-    {id: 'transport', label: 'Transport', icon: 'truck', count: quotation.vehicles?.length || 0, accent: '#7C3AED'},
-    {id: 'itinerary', label: 'Itinerary', icon: 'map', count: quotation.itinerary?.length || 0, accent: '#E11D48'},
-    {id: 'notes', label: 'Notes', icon: 'info', accent: '#0284C7'},
+  const tabs: {id: DetailsTab; label: string; count?: number; accent: string}[] = [
+    {id: 'overview', label: 'Overview', accent: '#4F46E5'},
+    {id: 'items', label: 'Items', count: quotation.items?.length || 0, accent: '#0891B2'},
+    {id: 'hotels', label: 'Hotels', count: quotation.hotels?.length || 0, accent: '#D97706'},
+    {id: 'transport', label: 'Vehicles', count: quotation.vehicles?.length || 0, accent: '#7C3AED'},
+    {id: 'itinerary', label: 'Itinerary', count: quotation.itinerary?.length || 0, accent: '#E11D48'},
+    {id: 'pricing', label: 'Pricing', accent: '#059669'},
+    {id: 'notes', label: 'Notes', accent: '#0284C7'},
   ];
   const activeAccent = tabs.find(tab => tab.id === activeTab)?.accent || colors.primary;
 
@@ -83,14 +83,13 @@ export const QuotationDetailsScreen: React.FC<Props> = ({quotation, onBack}) => 
             <Pressable
               key={tab.id}
               onPress={() => setActiveTab(tab.id)}
-              style={[styles.tab, selected ? {backgroundColor: tab.accent, borderColor: tab.accent} : null]}
+              style={[styles.tab, selected && styles.activeTab]}
               accessibilityRole="tab"
               accessibilityState={{selected}}
             >
-              <Feather name={tab.icon} size={15} color={selected ? '#FFFFFF' : colors.textSecondary} />
               <Text style={[styles.tabText, selected && styles.activeTabText]}>{tab.label}</Text>
               {tab.count !== undefined ? (
-                <Text style={[styles.tabCount, selected && styles.activeTabCount]}>{tab.count}</Text>
+                <Text style={styles.tabCount}>{tab.count}</Text>
               ) : null}
             </Pressable>
           );
@@ -245,13 +244,13 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   heroPrice: {minWidth: 132, alignItems: 'flex-end', paddingVertical: 2},
   heroPriceLabel: {fontSize: 8, fontWeight: '800', letterSpacing: 0.5, color: colors.textMuted},
   heroPriceValue: {fontSize: 18, fontWeight: '900', color: colors.primary, marginTop: 3},
-  tabsScroll: {marginHorizontal: -16, marginBottom: 14},
-  tabs: {flexDirection: 'row', gap: 8, paddingHorizontal: 16},
-  tab: {flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: colors.border, borderRadius: 11, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: colors.card},
+  tabsScroll: {marginHorizontal: -16, marginBottom: 14, borderBottomWidth: 1, borderBottomColor: colors.border},
+  tabs: {flexDirection: 'row', gap: 16, paddingHorizontal: 16},
+  tab: {flexDirection: 'row', alignItems: 'center', gap: 6, borderBottomWidth: 2, borderBottomColor: 'transparent', paddingHorizontal: 5, paddingVertical: 12},
+  activeTab: {borderBottomColor: colors.primary},
   tabText: {fontSize: 11, fontWeight: '800', color: colors.textSecondary},
-  activeTabText: {color: '#FFFFFF'},
+  activeTabText: {color: colors.primary},
   tabCount: {minWidth: 18, overflow: 'hidden', textAlign: 'center', fontSize: 9, fontWeight: '900', color: colors.textSecondary, backgroundColor: colors.surface, borderRadius: 9, paddingHorizontal: 5, paddingVertical: 2},
-  activeTabCount: {color: '#FFFFFF', backgroundColor: 'rgba(255,255,255,0.2)'},
   section: {marginBottom: 12, paddingBottom: 5},
   sectionTitle: {fontSize: 15, fontWeight: '900', marginBottom: 5},
   priceGrid: {flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between'},

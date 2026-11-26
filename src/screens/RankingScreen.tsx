@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { ScrollView } from '../components/ScrollView';
 import Feather from 'react-native-vector-icons/Feather';
+import type { ScrollViewInstance } from 'react-native';
 import { fetchAccountPoints, fetchPublicRanking } from '../api/tourApi';
 import { PointsCustomer, PointsPagination } from '../api/types';
 import { AppColors, useTheme } from '../theme/theme';
@@ -27,7 +28,7 @@ export const RankingScreen: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const [locating, setLocating] = useState(false);
   const [myRank, setMyRank] = useState<number | null>(null);
   const [error, setError] = useState('');
-  const scrollRef = useRef<React.ElementRef<typeof ScrollView>>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
 
   const loadRanking = useCallback(async (nextPage = 1, refresh = false) => {
     if (refresh) setRefreshing(true);
