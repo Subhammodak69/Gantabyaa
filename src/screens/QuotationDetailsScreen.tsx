@@ -36,7 +36,7 @@ export const QuotationDetailsScreen: React.FC<Props> = ({quotation, onBack}) => 
   const colors = useColors();
   const styles = makeStyles(colors);
   const [activeTab, setActiveTab] = React.useState<DetailsTab>('overview');
-  React.useEffect(() => setActiveTab('overview'), [quotation.id]);
+  React.useEffect(() => setActiveTab('overview'), [quotation.quotation_code]);
   const tabs: {id: DetailsTab; label: string; icon: FeatherName; count?: number; accent: string}[] = [
     {id: 'overview', label: 'Overview', icon: 'compass', accent: '#4F46E5'},
     {id: 'pricing', label: 'Pricing', icon: 'credit-card', accent: '#059669'},

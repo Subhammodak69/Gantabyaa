@@ -760,7 +760,7 @@ function AppInner() {
         return <MyEnquiriesScreen enquiries={enquiries} loading={loadingEnquiries} onRefresh={loadEnquiries} onViewEnquiry={openEnquiryDetails} />;
 
       case 'enquiry_details':
-        return selectedEnquiry ? <EnquiryDetailsScreen enquiry={selectedEnquiry} onBack={goBack} onViewQuotations={selectedEnquiry.id ? () => navigateTo('enquiry_quotations') : undefined} /> : <MyEnquiriesScreen enquiries={enquiries} loading={loadingEnquiries} onRefresh={loadEnquiries} onViewEnquiry={openEnquiryDetails} />;
+        return selectedEnquiry ? <EnquiryDetailsScreen enquiry={selectedEnquiry} onBack={goBack} onViewQuotations={selectedEnquiry.enquiry_code ? () => navigateTo('enquiry_quotations') : undefined} /> : <MyEnquiriesScreen enquiries={enquiries} loading={loadingEnquiries} onRefresh={loadEnquiries} onViewEnquiry={openEnquiryDetails} />;
 
       case 'enquiry_quotations':
         return selectedEnquiry ? <EnquiryQuotationsScreen enquiry={selectedEnquiry} onBack={goBack} onViewQuotation={openQuotationDetails} /> : <MyEnquiriesScreen enquiries={enquiries} loading={loadingEnquiries} onRefresh={loadEnquiries} onViewEnquiry={openEnquiryDetails} />;

@@ -354,11 +354,41 @@ export interface QuotationItem {
   total_price?: string | number;
 }
 
-export interface Quotation {
+export interface QuotationCustomer {
   id: string;
+  name: string;
+  mobile?: string | null;
+  email?: string | null;
+  profile_picture?: string | null;
+}
+
+export interface QuotationPackage {
+  id: string;
+  name: string;
+  description?: string | null;
+}
+
+export interface QuotationVariant {
+  id: string;
+  name: string;
+  banner?: Record<string, string | null> | null;
+  season_name?: string | null;
+}
+
+export interface QuotationDestination {
+  id: string;
+  name: string;
+}
+
+export interface Quotation {
   quotation_code: string;
   enquiry_id: string;
   tour_name: string;
+  customer?: QuotationCustomer | null;
+  package?: QuotationPackage | null;
+  variant?: QuotationVariant | null;
+  destination?: QuotationDestination | null;
+  departure_id?: string | null;
   travel_date?: string | null;
   return_date?: string | null;
   subtotal?: string | number;
@@ -372,9 +402,18 @@ export interface Quotation {
   important_notes?: string | null;
   inclusion?: string | null;
   exclusion?: string | null;
+  created_by?: {
+    account_id: string;
+    name: string;
+    email?: string | null;
+    profile_picture?: string | null;
+  } | null;
+  sent_at?: string | null;
   rejected_reason?: string | null;
   accepted_at?: string | null;
   rejected_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
   items?: QuotationItem[];
   hotels?: any[];
   vehicles?: any[];

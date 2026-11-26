@@ -344,9 +344,9 @@ export async function fetchInvoices(): Promise<Invoice[]> {
 }
 
 // ── Quotations ───────────────────────────────────────────────────────
-export async function fetchEnquiryQuotations(enquiryId: string): Promise<Quotation[]> {
+export async function fetchEnquiryQuotations(enquiryCode: string): Promise<Quotation[]> {
   const response = await authenticated<ApiEnvelope<Quotation[]>>(
-    `/api/v1/quotations/enquiry/${encodeURIComponent(enquiryId)}`
+    `/api/v1/quotations/enquiry/${encodeURIComponent(enquiryCode)}`
   );
   return Array.isArray(response.data) ? response.data : [];
 }

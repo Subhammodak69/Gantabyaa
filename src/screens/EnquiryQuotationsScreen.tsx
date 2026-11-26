@@ -39,22 +39,22 @@ export const EnquiryQuotationsScreen: React.FC<Props> = ({enquiry, onBack, onVie
   const [actionLoading, setActionLoading] = useState(false);
 
   const loadQuotations = useCallback(async () => {
-    if (!enquiry.id) {
-      setError('This enquiry does not have an ID, so its quotations cannot be loaded.');
+    if (!enquiry.enquiry_code) {
+      setError('This enquiry does not have an enquiry code, so its quotations cannot be loaded.');
       setLoading(false);
       return;
     }
     setLoading(true);
     setError('');
     try {
-      const results = await fetchEnquiryQuotations(enquiry.id);
+      const results = await fetchEnquiryQuotations(enquiry.enquiry_code);
       setQuotations(results);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'Could not load quotations.');
     } finally {
       setLoading(false);
     }
-  }, [enquiry.id]);
+  }, [enquiry.enquiry_code]);
 
   useEffect(() => {
     loadQuotations();
@@ -116,7 +116,7 @@ export const EnquiryQuotationsScreen: React.FC<Props> = ({enquiry, onBack, onVie
       }
       setActionLoading(true);
       try {
-        await acceptQuotation(action.quotation.id, cleanedTravellers);
+        await acceptQuotation(action.quotation.quotation_code, cleanedTravellers);
         setActionLoading(false);
         resetActionForm();
         Alert.alert('Quotation accepted', 'Your booking has been created successfully.');
@@ -136,7 +136,7 @@ export const EnquiryQuotationsScreen: React.FC<Props> = ({enquiry, onBack, onVie
     }
     setActionLoading(true);
     try {
-      await rejectQuotation(action.quotation.id, reason);
+      await rejectQuotation(action.quotation.quotation_code, reason);
       setActionLoading(false);
       resetActionForm();
       Alert.alert('Quotation declined', 'The travel team has been notified.');
@@ -173,7 +173,7 @@ export const EnquiryQuotationsScreen: React.FC<Props> = ({enquiry, onBack, onVie
           <Feather name="alert-circle" size={36} color={colors.danger} />
           <Text style={styles.stateTitle}>Could not load quotations</Text>
           <Text style={styles.stateText}>{error}</Text>
-          {enquiry.id ? <Pressable style={styles.retryButton} onPress={loadQuotations}>
+          {enquiry.enquiry_code ? <Pressable style={styles.retryButton} onPress={loadQuotations}>
             <Text style={styles.retryText}>Try again</Text>
           </Pressable> : null}
         </View>
@@ -184,7 +184,7 @@ export const EnquiryQuotationsScreen: React.FC<Props> = ({enquiry, onBack, onVie
           <Text style={styles.stateText}>Quotations shared for this enquiry will appear here.</Text>
         </View>
       ) : quotations.map(quotation => (
-        <View key={quotation.id} style={styles.quotationCard}>
+        <View key={quotation.quotation_code} style={styles.quotationCard}>
           <Pressable
             style={styles.quotationRow}
             onPress={() => onViewQuotation?.(quotation)}
