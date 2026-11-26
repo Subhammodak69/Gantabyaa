@@ -9,6 +9,7 @@ import {useColors} from '../theme/theme';
 interface Props {
   enquiry: EnquiryData;
   onBack: () => void;
+  onViewQuotation?: (quotation: Quotation) => void;
 }
 
 const formatDate = (value?: string | null) => {
@@ -25,7 +26,7 @@ const formatAmount = (value?: string | number | null) => {
   return Number.isFinite(amount) ? `₹${amount.toLocaleString('en-IN')}` : String(value);
 };
 
-export const EnquiryQuotationsScreen: React.FC<Props> = ({enquiry, onBack}) => {
+export const EnquiryQuotationsScreen: React.FC<Props> = ({enquiry, onBack, onViewQuotation}) => {
   const colors = useColors();
   const styles = makeStyles(colors);
   const [quotations, setQuotations] = useState<Quotation[]>([]);
@@ -185,10 +186,17 @@ export const EnquiryQuotationsScreen: React.FC<Props> = ({enquiry, onBack}) => {
       ) : quotations.map(quotation => (
         <View key={quotation.id} style={styles.quotationCard}>
           <View style={styles.quotationHeader}>
-            <View style={styles.quotationHeading}>
+          <Pressable
+            style={styles.quotationHeading}
+            onPress={() => onViewQuotation?.(quotation)}
+            disabled={!onViewQuotation}
+            accessibilityRole="button"
+            accessibilityLabel={`View details for ${quotation.quotation_code || quotation.tour_name}`}
+          >
               <Text style={styles.quotationCode}>{quotation.quotation_code || 'Quotation'}</Text>
               <Text style={styles.tourName}>{quotation.tour_name || 'Travel quotation'}</Text>
-            </View>
+            {onViewQuotation ? <Text style={styles.detailsLink}>View details</Text> : null}
+          </Pressable>
             <Text style={styles.status}>{String(quotation.status || 'PENDING').replace(/_/g, ' ')}</Text>
           </View>
 
@@ -288,6 +296,7 @@ const makeStyles = (colors: ReturnType<typeof useColors>) => StyleSheet.create({
   quotationHeading: {flex: 1},
   quotationCode: {fontSize: 10, fontWeight: '900', letterSpacing: 0.7, color: colors.primary},
   tourName: {fontSize: 16, fontWeight: '900', color: colors.text, marginTop: 4},
+  detailsLink: {fontSize: 11, fontWeight: '900', color: colors.primary, marginTop: 5},
   status: {fontSize: 9, fontWeight: '900', color: colors.primary, backgroundColor: colors.primarySubtle, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5, overflow: 'hidden'},
   dateRow: {flexDirection: 'row', alignItems: 'center', gap: 7, paddingVertical: 12},
   dateText: {fontSize: 11, color: colors.textSecondary},

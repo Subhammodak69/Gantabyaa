@@ -12,7 +12,7 @@ import {
   NavScreen,
   TravelDocument,
 } from './src/types';
-import { DestinationRecord } from './src/api/types';
+import { DestinationRecord, Quotation } from './src/api/types';
 import { fetchTourPackages, fetchAllDestinations, fetchMe, fetchEnquiries, fetchWishlist, fetchNotifications, markNotificationRead, markAllNotificationsRead as markAllNotificationsReadApi, getAccessToken, refreshSession, logout as logoutApi, identifyVisitor, getTrackedVisitorId, startVisitorSession, heartbeatVisitorSession, endVisitorSession, trackVisitorEvent, AuthUser, EnquiryRecord, addWishlistItem, removeWishlistItem, validateReferralCode, REFERRAL_CODE_KEY } from './src/api/tourApi';
 import { createNotificationSocket, createVisitorSocket } from './src/realtime/socket';
 
@@ -44,6 +44,7 @@ import { MyTripsScreen, MyEnquiriesScreen, BillsInvoicesScreen } from './src/scr
 import { InvoiceDetailsScreen } from './src/screens/InvoiceDetailsScreen';
 import { EnquiryDetailsScreen } from './src/screens/EnquiryDetailsScreen';
 import { EnquiryQuotationsScreen } from './src/screens/EnquiryQuotationsScreen';
+import { QuotationDetailsScreen } from './src/screens/QuotationDetailsScreen';
 import { BookingDetailsScreen } from './src/screens/BookingDetailsScreen';
 import { WalletScreen } from './src/screens/WalletScreen';
 import { PointsScreen } from './src/screens/PointsScreen';
@@ -259,6 +260,7 @@ function AppInner() {
   // Drawers and full-screen detail flows
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [selectedEnquiry, setSelectedEnquiry] = useState<EnquiryData | null>(null);
+  const [selectedQuotation, setSelectedQuotation] = useState<Quotation | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<import('./src/api/tourApi').CustomerTour | null>(null);
   const [selectedInvoice, setSelectedInvoice] = useState<import('./src/api/tourApi').Invoice | null>(null);
 
@@ -551,6 +553,7 @@ function AppInner() {
   };
 
   const openEnquiryDetails = (enquiry: EnquiryData) => { setSelectedEnquiry(enquiry); navigateTo('enquiry_details'); };
+  const openQuotationDetails = (quotation: Quotation) => { setSelectedQuotation(quotation); navigateTo('quotation_details'); };
   const openBookingDetails = (booking: import('./src/api/tourApi').CustomerTour) => { setSelectedBooking(booking); navigateTo('booking_details'); };
   const openInvoiceDetails = (invoice: import('./src/api/tourApi').Invoice) => { setSelectedInvoice(invoice); navigateTo('invoice_details'); };
 
@@ -589,7 +592,7 @@ function AppInner() {
     setRootScreen('auth');
   };
 
-  const protectedScreens: NavScreen[] = ['profile', 'profile_details', 'edit_profile', 'sessions', 'my_trips', 'my_enquiries', 'enquiry_details', 'bills_invoices', 'invoice_details', 'booking_details', 'documents', 'document_viewer', 'wishlist', 'referrals', 'notifications', 'points'];
+  const protectedScreens: NavScreen[] = ['profile', 'profile_details', 'edit_profile', 'sessions', 'my_trips', 'my_enquiries', 'enquiry_details', 'enquiry_quotations', 'quotation_details', 'bills_invoices', 'invoice_details', 'booking_details', 'documents', 'document_viewer', 'wishlist', 'referrals', 'notifications', 'points'];
   const navigateWithAuth = (screen: NavScreen) => {
     if (protectedScreens.includes(screen) && !isLoggedIn) { navigateTo('auth'); return; }
     navigateTo(screen);
@@ -759,7 +762,10 @@ function AppInner() {
         return selectedEnquiry ? <EnquiryDetailsScreen enquiry={selectedEnquiry} onBack={goBack} onViewQuotations={selectedEnquiry.id ? () => navigateTo('enquiry_quotations') : undefined} /> : <MyEnquiriesScreen enquiries={enquiries} loading={loadingEnquiries} onRefresh={loadEnquiries} onViewEnquiry={openEnquiryDetails} />;
 
       case 'enquiry_quotations':
-        return selectedEnquiry ? <EnquiryQuotationsScreen enquiry={selectedEnquiry} onBack={goBack} /> : <MyEnquiriesScreen enquiries={enquiries} loading={loadingEnquiries} onRefresh={loadEnquiries} onViewEnquiry={openEnquiryDetails} />;
+        return selectedEnquiry ? <EnquiryQuotationsScreen enquiry={selectedEnquiry} onBack={goBack} onViewQuotation={openQuotationDetails} /> : <MyEnquiriesScreen enquiries={enquiries} loading={loadingEnquiries} onRefresh={loadEnquiries} onViewEnquiry={openEnquiryDetails} />;
+
+      case 'quotation_details':
+        return selectedQuotation ? <QuotationDetailsScreen quotation={selectedQuotation} onBack={goBack} /> : selectedEnquiry ? <EnquiryQuotationsScreen enquiry={selectedEnquiry} onBack={goBack} onViewQuotation={openQuotationDetails} /> : <MyEnquiriesScreen enquiries={enquiries} loading={loadingEnquiries} onRefresh={loadEnquiries} onViewEnquiry={openEnquiryDetails} />;
 
       case 'bills_invoices':
         return <BillsInvoicesScreen onOpenInvoice={openInvoiceDetails} />;
